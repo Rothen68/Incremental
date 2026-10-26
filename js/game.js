@@ -413,7 +413,7 @@
     const D = d.humanDemand + d.botDemand;
     const r = Math.min(D * dt, S.published);
     const hr = D > 0 ? r * d.humanDemand / D : 0;
-    const br = r - hr;
+    const br = Math.max(0, r - hr);
     S.published -= r; S.reads += r; S.humanReads += hr; S.botReads += br;
     const inc = hr * d.adRate + br * d.adRate * 0.5;
     S.money += inc; S.earned += inc;
