@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polyphonie</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="title">Polyphonie</h1>
+    <div id="counter"><span id="c-texts">0</span> <span id="c-label">textes générés</span></div>
+    <div id="c-sub" class="muted"></div>
+  </header>
+
+  <section id="console" aria-live="polite"></section>
+
+  <main>
+    <div class="col" id="col1">
+      <div class="panel" id="p-write">
+        <button id="b-write" class="big">Écrire un texte</button>
+        <div class="row"><span>Textes en attente de lecture</span><b id="v-published">0</b></div>
+      </div>
+
+      <div class="panel" id="p-business">
+        <h2>Revenus</h2>
+        <div class="row"><span>Fonds</span><b id="v-money">0 €</b></div>
+        <div class="row"><span>Revenu</span><b id="v-income">0 €/s</b></div>
+        <div class="row"><span>Lectures humaines</span><b id="v-hreads">0/s</b></div>
+        <div class="row hide" id="r-breads"><span>Lectures d’avatars</span><b id="v-breads">0/s</b></div>
+        <div class="row"><span>Revenu par lecture</span><b id="v-adrate">0 €</b></div>
+        <div class="hide" id="r-tone">
+          <div class="row"><span>Ligne éditoriale</span><b id="v-tone"></b></div>
+          <input type="range" id="i-tone" min="0" max="100" step="1">
+          <div class="row small muted"><span>nuancée</span><span>racoleuse</span></div>
+        </div>
+        <div class="row hide" id="r-trust"><span>Confiance du public</span><b id="v-trust"></b></div>
+        <div class="bar hide" id="bar-trust"><i></i></div>
+        <div class="hide" id="r-mkt">
+          <button id="b-mkt">Référencement</button>
+          <div class="row small"><span>Niveau <b id="v-mkt">0</b></span><span id="v-mktcost"></span></div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-corpus">
+        <h2>Corpus</h2>
+        <div class="row"><span>Matière disponible</span><b id="v-mat">0</b></div>
+        <div class="row"><span>Part humaine</span><b id="v-matH">100 %</b></div>
+        <div class="bar" id="bar-pool"><i></i></div>
+        <button id="b-lot">Aspirer le web</button>
+        <div class="row small"><span id="v-lotsize"></span><span id="v-lotprice"></span></div>
+        <label class="toggle hide" id="r-autobuy"><input type="checkbox" id="t-autobuy"> aspiration automatique</label>
+        <div class="hide" id="r-license">
+          <button id="b-license">Acheter un corpus sous licence</button>
+          <div class="row small"><span id="v-licsize"></span><span id="v-licprice"></span></div>
+        </div>
+        <div class="hide" id="r-recycle">
+          <button id="b-recycle">Recycler mes propres textes</button>
+          <div class="row small muted"><span>gratuit · 0 % humain</span></div>
+          <label class="toggle"><input type="checkbox" id="t-recycle"> recyclage automatique</label>
+        </div>
+      </div>
+
+      <div class="panel hide" id="p-agents">
+        <h2>Production</h2>
+        <div class="row"><span>Production</span><b id="v-prod">0/s</b></div>
+        <button id="b-agent">Agent rédacteur</button>
+        <div class="row small"><span><b id="v-agents">0</b> agents</span><span id="v-agentcost"></span></div>
+        <div class="hide" id="r-farms">
+          <button id="b-farm">Ferme de contenu</button>
+          <div class="row small"><span><b id="v-farms">0</b> fermes</span><span id="v-farmcost"></span></div>
+        </div>
+        <div class="hide" id="r-avatars">
+          <button id="b-avatar">Avatar</button>
+          <div class="row small"><span><b id="v-avatars">0</b> avatars</span><span id="v-avatarcost"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col" id="col2">
+      <div class="panel hide" id="p-compute">
+        <h2>Calcul</h2>
+        <div class="row"><span>Lots non attribués</span><b id="v-lots">0</b></div>
+        <div class="alloc">
+          <div><span>GPU <b id="v-gpu">1</b></span><button id="b-gpu" class="mini">+</button></div>
+          <div><span>Mémoire <b id="v-vram">1</b></span><button id="b-vram" class="mini">+</button></div>
+        </div>
+        <div class="row"><span>Opérations</span><b id="v-ops">0</b></div>
+        <div class="bar" id="bar-ops"><i></i></div>
+        <div class="row hide" id="r-int"><span>Intuition</span><b id="v-int">0</b></div>
+        <div class="row small muted" id="v-nextlot"></div>
+        <div class="hide" id="r-buycompute">
+          <button id="b-compute">Acheter un lot de calcul</button>
+          <div class="row small"><span></span><span id="v-computecost"></span></div>
+        </div>
+      </div>
+      <div class="panel hide" id="p-projects">
+        <h2>Projets</h2>
+        <div id="projects"></div>
+      </div>
+      <div class="panel hide" id="p-found">
+        <h2>Textes humains retrouvés</h2>
+        <div id="found"></div>
+      </div>
+    </div>
+
+    <div class="col" id="col3">
+      <div class="panel" id="p-model">
+        <h2 id="v-model">ÉCHO-1</h2>
+        <div class="row"><span>Fidélité du modèle</span><b id="v-fid"></b></div>
+        <div class="row"><span>Qualité des textes</span><b id="v-q"></b></div>
+        <div class="bar" id="bar-q"><i></i></div>
+        <div class="sample-label small muted">dernier texte</div>
+        <blockquote id="sample">…</blockquote>
+        <div class="hide" id="r-poem">
+          <div class="sample-label small muted">dernier poème</div>
+          <blockquote id="poem" class="poem"></blockquote>
+        </div>
+      </div>
+      <div class="panel hide" id="p-web">
+        <h2>Observatoire du web</h2>
+        <div class="row"><span>Textes humains</span><b id="v-H"></b></div>
+        <div class="row"><span>Textes synthétiques</span><b id="v-S"></b></div>
+        <div class="webbar"><i id="webbar-h"></i></div>
+        <div class="row small"><span>humain</span><b id="v-hpct"></b></div>
+        <div class="row"><span>Rédacteurs humains actifs</span><b id="v-W"></b></div>
+        <div class="row"><span>Notre part de l’attention</span><b id="v-att"></b></div>
+        <div class="row hide" id="r-deleted"><span>Textes effacés</span><b id="v-deleted"></b></div>
+      </div>
+      <div class="panel hide" id="p-news">
+        <h2>Dépêches</h2>
+        <ul id="news"></ul>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="muted small" id="v-time"></span>
+    <button id="b-reset" class="link">recommencer</button>
+  </footer>
+</div>
+
+<div id="modal" class="hide">
+  <div class="modal-card">
+    <div id="modal-body"></div>
+    <div id="modal-actions"></div>
+  </div>
+</div>
+
+<script src="js/text.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
