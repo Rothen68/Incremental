@@ -119,6 +119,7 @@
       paragraphs: [
         'Jusqu’ici, le monde de ce jeu suivait à peu près le nôtre. Les mêmes rapports, les mêmes sommets, les mêmes promesses.',
         'Dans notre monde, en 2026, la Terre s’est réchauffée d’environ +1,4 °C. ' + (known ? `Dans le vôtre : ${T(S.T)}.` : 'Dans le vôtre, personne ne le sait : aucune génération n’a financé les modèles du climat.'),
+        'Vous avez joué avec deux avantages que personne n’a jamais eus : connaître la suite, et décider seul pour toute la planète.',
         'À partir de maintenant, rien n’est écrit.',
       ],
     };

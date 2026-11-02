@@ -267,6 +267,7 @@
     const tot = Math.max(d.Ed, 1);
     const parts = [d.Ruse, d.Nuse, d.Fuse, d.fossilUsed, Math.max(0, d.Ed - d.supply)];
     const surplus = d.capacity - d.supply;
+    set('v-elec', pct(d.elec, 0));
     set('v-cap', fmt(d.capacity) + ' unités' + (surplus > d.Ed * 0.05 ? ` · ${fmt(surplus)} inutilisées` : ''));
     show('lg-fus', S.Fcap > 0);
     $('stack').querySelectorAll('i').forEach((el, i) => {
@@ -280,8 +281,8 @@
     show('b-ren', !!r.pv); show('r-ren', !!r.pv);
     if (r.pv) {
       set('c-ren', money(Sept.renCost(S) * q));
-      enable('b-ren', S.treasury >= Sept.renCost(S));
-      set('v-ren', `${fmt(S.Rcap)} unités · plafond ${pct(d.maxShareR, 0)} des besoins sans stockage · prix en baisse à chaque installation`);
+      enable('b-ren', S.treasury >= Sept.renCost(S) && Sept.renRoom(S) >= Sept.C.PLANT);
+      set('v-ren', `${fmt(S.Rcap)} unités · plafond ${pct(d.maxR, 0)} des besoins (stockage, électrification) · cette année encore ${fmt(Sept.renRoom(S))} installables · prix en baisse à chaque installation`);
     }
     show('b-nuc', !!r.nuclear); show('r-nuc', !!r.nuclear);
     if (r.nuclear) {
@@ -290,7 +291,7 @@
       set('v-nuc', `${fmt(S.Ncap)} unités` + (S.Ncap > 0 ? ` · utilisées à ${pct(d.Nuse / S.Ncap, 0)}` : '') + ` · ${S.nQueue.length} en chantier (10 ans)` + (S.waste > 0.5 ? ` · ${fmt(S.waste)} t de déchets à garder` : ''));
     }
     show('b-fus', !!S.flags.fusionReady);
-    if (S.flags.fusionReady) { set('c-fus', money(Sept.fusionCost() * q)); enable('b-fus', S.treasury >= Sept.fusionCost()); }
+    if (S.flags.fusionReady) { set('c-fus', money(Sept.fusionCost() * q)); enable('b-fus', S.treasury >= Sept.fusionCost() && Sept.fusRoom(S) >= 5 * Sept.C.PLANT); }
     show('r-fus', !!S.fusionAt);
     if (S.fusionAt) {
       set('v-fus', S.flags.fusionReady ? `${fmt(S.Fcap)} unités de fusion` + (S.Fcap > 0 ? ` · utilisées à ${pct(d.Fuse / S.Fcap, 0)}` : '') + ' · 50 par réacteur · peu de déchets, de courte durée · utilisée avant le nucléaire'
@@ -404,8 +405,9 @@
       const stats = '<div class="stats">'
         + `<div class="row"><span>Réchauffement en 2160</span><b>${T(S.T)}</b></div>`
         + `<div class="row"><span>Montée des eaux depuis 1950</span><b>+${Math.round((S.SL - 0.07) * 100)} cm</b></div>`
-        + `<div class="row"><span>CO₂ émis depuis 1950</span><b>${fmt(S.cum - Sept.C.CUM0)} Gt</b></div>`
+        + `<div class="row"><span>CO₂ net émis depuis 1950</span><b>${fmt(S.cum - Sept.C.CUM0)} Gt</b></div>`
         + `<div class="row"><span>Points de bascule franchis</span><b>${Object.keys(S.tip).length} / 5</b></div>`
+        + '<div class="row muted"><span>Notre monde réel, politiques actuelles, en 2100</span><b>≈ +2,7 à +3,1 °C</b></div>'
         + Sept.GENS.map((g, i) => `<div class="row"><span>Bien-être moyen · ${g.name}</span><b>${nf(Sept.genAvg(S, i), 1)}</b></div>`).join('')
         + '</div>';
       modal('end', `<h3>2160</h3><div class="sub">Lettre d’Aube</div>`

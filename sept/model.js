@@ -33,7 +33,7 @@
       tip: {}, tipYears: {}, dac: 0, digues: 0, clim: 0, sobriety: 0, cp: 0, market: true,
       research: {}, flags: {}, effects: [], shock: 0,
       log: [], hist: [], genW: [], genStart: [],
-      qty: 1, lastYear: C.START, fusionAt: 0,
+      qty: 1, lastYear: C.START, fusionAt: 0, renYear: 0, fusYear: 0,
       lastSave: Date.now(),
     };
   }
@@ -60,6 +60,10 @@
   const closeCost = () => 5;
   function borrowAmount(S) { return Math.round(S.Y * 0.3); }
 
+  // Les filières industrielles limitent ce qu'on peut installer chaque année.
+  function renRoom(S) { return Math.max(0, 30 + 0.3 * S.Rcap - S.renYear); }
+  function fusRoom(S) { return Math.max(0, 50 + 0.2 * S.Fcap - S.fusYear); }
+
   function fossilPlants(S) { return S.fossil.reduce((a, c) => a + c.n, 0); }
 
   // ---------- grandeurs dérivées ----------
@@ -73,9 +77,12 @@
       * (1 - 0.15 * S.cp / 200) * (1 + 0.03 * S.clim);
     d.Ed = S.Y * d.intensity + S.dac * 15; // le captage consomme beaucoup d'énergie
     d.maxShareR = 0.4 + (r.storage1 ? 0.25 : 0) + (r.storage2 ? 0.25 : 0);
-    d.Ruse = Math.min(S.Rcap, d.Ed * d.maxShareR);
-    d.Fuse = Math.min(S.Fcap, Math.max(0, d.Ed - d.Ruse));
-    d.Nuse = Math.min(S.Ncap, Math.max(0, d.Ed - d.Ruse - d.Fuse));
+    // part des besoins qu'une électricité propre peut couvrir (le reste : carburants)
+    d.elec = Math.min(1, 0.5 + (r.ev ? 0.15 : 0) + (r.heatpump ? 0.1 : 0) + (r.greensteel ? 0.1 : 0) + (r.h2 ? 0.1 : 0) + (r.synfuel ? 0.05 : 0));
+    d.maxR = Math.min(d.maxShareR, d.elec);
+    d.Ruse = Math.min(S.Rcap, d.Ed * d.maxR);
+    d.Fuse = Math.min(S.Fcap, Math.max(0, d.Ed * d.elec - d.Ruse));
+    d.Nuse = Math.min(S.Ncap, Math.max(0, d.Ed * d.elec - d.Ruse - d.Fuse));
     d.fossilUsed = Math.min(d.F, Math.max(0, d.Ed - d.Ruse - d.Fuse - d.Nuse));
     d.supply = d.Ruse + d.Fuse + d.Nuse + d.fossilUsed;
     d.capacity = S.Rcap + S.Fcap + S.Ncap + d.F;
@@ -134,9 +141,13 @@
       if (a > 0.1) trend = clamp(Math.pow(b / a, 0.1) - 1, -0.06, 0.05);
     }
     let cum = S.cum, e = d.net;
-    for (let y = Math.ceil(S.year); y < toYear; y++) { cum += e; e = e > 0 ? e * (1 + trend) : e; }
+    for (let y = Math.ceil(S.year); y < toYear; y++) { cum = addNet(cum, e); e = e > 0 ? e * (1 + trend) : e; }
     return { year: toYear, T: C.TCRE * cum + C.NONCO2 - S.mask };
   }
+
+  // Quand on retire du CO₂ de l'air, l'océan et les sols en relâchent une partie.
+  // On ne peut pas non plus revenir en deçà du niveau de 1950.
+  function addNet(cum, net) { return Math.max(C.CUM0, cum + (net < 0 ? net * 0.6 : net)); }
 
   // ---------- actions ----------
   function spend(S, c) { if (S.treasury < c - 1e-9) return false; S.treasury -= c; return true; }
@@ -146,7 +157,7 @@
     buildFossil(S) { return repeat(S, () => { if (!spend(S, fossilCost(S))) return false; addFossil(S, 1); return true; }); },
     buildRen(S) {
       if (!S.research.pv) return 0;
-      return repeat(S, () => { if (!spend(S, renCost(S))) return false; S.Rcap += C.PLANT; S.cumR += C.PLANT; return true; });
+      return repeat(S, () => { if (renRoom(S) < C.PLANT || !spend(S, renCost(S))) return false; addRen(S); return true; });
     },
     buildNuc(S) {
       if (!S.research.nuclear) return 0;
@@ -158,7 +169,7 @@
     },
     buildFusion(S) {
       if (!S.flags.fusionReady) return 0;
-      return repeat(S, () => { if (!spend(S, fusionCost())) return false; S.Fcap += 5 * C.PLANT; return true; });
+      return repeat(S, () => { if (fusRoom(S) < 5 * C.PLANT || !spend(S, fusionCost())) return false; S.Fcap += 5 * C.PLANT; S.fusYear += 5 * C.PLANT; return true; });
     },
     closeFossil(S) {
       return repeat(S, () => {
@@ -203,6 +214,8 @@
     },
   };
 
+  function addRen(S) { S.Rcap += C.PLANT; S.cumR += C.PLANT; S.renYear += C.PLANT; }
+
   function addFossil(S, n) {
     const y = Math.floor(S.year);
     const last = S.fossil[S.fossil.length - 1];
@@ -228,10 +241,14 @@
     { id: 'adapt', y: 2000, cost: 120, name: 'Plan d’adaptation', desc: 'Accepter que le climat a déjà changé. Débloque digues et climatisation.' },
     { id: 'storage1', y: 2005, cost: 250, req: 'pv', name: 'Batteries', desc: 'Stocker le soleil de midi pour le soir. Part maximale des renouvelables : 40 % → 65 %.' },
     { id: 'dividend', y: 2008, cost: 150, req: 'carbontax', name: 'Dividende carbone', desc: 'Rendre l’argent de la taxe aux ménages. La colère retombe, le budget aussi.' },
-    { id: 'heatpump', y: 2010, cost: 300, name: 'Pompes à chaleur', desc: 'Besoins en énergie −15 %.' },
+    { id: 'ev', y: 2008, cost: 250, name: 'Véhicules électriques', desc: 'Brancher les voitures et les camions. Part des besoins couverte par l’électricité propre +15 %.' },
+    { id: 'heatpump', y: 2010, cost: 300, name: 'Pompes à chaleur', desc: 'Chauffer à l’électricité, trois fois mieux. Besoins −15 %, part électrifiable +10 %.' },
     { id: 'forests', y: 2015, cost: 400, name: 'Forêts et agroécologie', desc: 'Arrêter la déforestation, changer les sols. Émissions hors énergie −60 %.' },
     { id: 'storage2', y: 2020, cost: 600, req: 'storage1', name: 'Stockage saisonnier', desc: 'Garder l’été pour l’hiver. Part maximale des renouvelables : 90 %.' },
     { id: 'dac', y: 2022, cost: 500, name: 'Captage direct du CO₂', desc: 'Des machines qui aspirent le CO₂ de l’air. Chères à faire tourner, et très gourmandes en énergie : alimentées au fossile, elles émettent plus qu’elles ne captent. Mais elles font reculer le compteur.' },
+    { id: 'greensteel', y: 2025, cost: 700, name: 'Acier et ciment bas carbone', desc: 'Réinventer l’industrie lourde. Part électrifiable +10 %.' },
+    { id: 'h2', y: 2032, cost: 900, req: 'greensteel', name: 'Hydrogène vert', desc: 'Pour ce qui ne se branche pas : engrais, chimie, navires. Part électrifiable +10 %.' },
+    { id: 'synfuel', y: 2050, cost: 1500, req: 'h2', name: 'Carburants de synthèse', desc: 'Des avions qui volent avec de l’air et du soleil. Très cher. Part électrifiable +5 %.' },
     { id: 'eff3', y: 2030, cost: 800, req: 'eff2', name: 'Sobriété technique', desc: 'Des objets qui durent. Besoins en énergie −15 %.' },
     { id: 'geo', y: 2040, cost: 400, name: 'Aérosols stratosphériques', desc: 'Voiler le soleil pour refroidir la Terre. Peu cher, rapide. Il faudra continuer chaque année, et toutes les générations après vous aussi.',
       effect: (S) => log(S, 'Les avions sont prêts. Il suffit de régler la jauge.', 'sys') },
@@ -335,7 +352,7 @@
     S.Y *= Math.exp(d.growth * dt);
     S.treasury += d.netIncome * dt;
     if (S.treasury < 0) { S.debt += -S.treasury; S.treasury = 0; }
-    S.cum = Math.max(C.CUM0 * 0.8, S.cum + d.net * dt);
+    S.cum = addNet(S.cum, d.net * dt);
     // masque d'aérosols : monte lentement, retombe vite
     const geoTarget = S.debt > 3 * S.Y ? 0 : S.geoTarget;
     const prevMask = S.mask;
@@ -370,15 +387,15 @@
   }
 
   function market(S, d) {
-    const capR = Math.min(S.Rcap, d.Ed * d.maxShareR);
+    const capR = Math.min(S.Rcap, d.Ed * d.maxR);
     let cap = capR + S.Fcap + S.Ncap + d.F;
     const need = d.Ed * 1.03;
     let guard = 0;
     while (cap < need && guard++ < 500) {
-      const roomR = d.Ed * d.maxShareR - Math.min(S.Rcap, d.Ed * d.maxShareR);
+      const roomR = Math.min(d.Ed * d.maxR - Math.min(S.Rcap, d.Ed * d.maxR), renRoom(S));
       const fEff = fossilCost(S) * (1 + S.cp / 50);
       const canRen = S.research.pv && roomR > 1 && renCost(S) < fEff;
-      if (canRen) { if (!spend(S, renCost(S))) break; S.Rcap += C.PLANT; S.cumR += C.PLANT; }
+      if (canRen && roomR >= C.PLANT) { if (!spend(S, renCost(S))) break; addRen(S); }
       else { if (!spend(S, fossilCost(S))) break; addFossil(S, 1); }
       cap += C.PLANT;
     }
@@ -386,6 +403,7 @@
 
   function yearly(S, d) {
     const y = S.lastYear;
+    S.renYear = 0; S.fusYear = 0;
     // centrales fossiles en fin de vie
     const before = fossilPlants(S);
     S.fossil = S.fossil.filter((c) => y - c.y < C.FOSSIL_LIFE);
@@ -448,7 +466,7 @@
 
   root.Sept = {
     C, GENS, END, newState, derive, tick, advance, A, RESEARCH, visibleResearch,
-    fossilCost, renCost, nucCost, fusionCost, industryCost, serviceCost, dacCost, digueCost, climCost, closeCost, borrowAmount,
+    renRoom, fusRoom, fossilCost, renCost, nucCost, fusionCost, industryCost, serviceCost, dacCost, digueCost, climCost, closeCost, borrowAmount,
     fossilPlants, genAvg, fmtT, save, load, wipe, log,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

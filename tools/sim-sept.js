@@ -14,7 +14,7 @@ A.start(S);
 S.market = true;
 const out = [];
 let lastLog = 0;
-const climateIds = ['keeling', 'models', 'giec', 'pv', 'wind', 'storage1', 'storage2', 'eff1', 'eff2', 'eff3', 'heatpump', 'forests', 'filters', 'carbontax', 'dividend', 'adapt', 'dac', 'meadows', 'dac2'];
+const climateIds = ['keeling', 'models', 'giec', 'pv', 'wind', 'storage1', 'storage2', 'eff1', 'eff2', 'eff3', 'heatpump', 'forests', 'filters', 'carbontax', 'dividend', 'adapt', 'dac', 'meadows', 'dac2', 'ev', 'greensteel', 'h2', 'synfuel'];
 
 while (S.phase !== 'end') {
   if (S.phase === 'transition') { A.nextGen(S); continue; }
@@ -34,7 +34,7 @@ while (S.phase !== 'end') {
     const share = mode === 'green' ? 0.3 : 0.15;
     if (S.research.pv && Sept.renCost(S) < S.treasury * share) A.buildRen(S);
     if (S.research.dac && S.year > 2040 && Sept.dacCost(S) < S.treasury * 0.1 && d.netIncome > 50 && d.net > 0 && mode === 'green') A.buyDac(S);
-    if (S.research.nuclear && mode === 'green' && S.Rcap >= d.Ed * d.maxShareR * 0.95 && S.Ncap + S.nQueue.length * 20 < d.Ed * (1 - d.maxShareR) && Sept.nucCost(S) < S.treasury * 0.5) A.buildNuc(S);
+    if (S.research.nuclear && mode === 'green' && S.Rcap >= d.Ed * d.maxR * 0.95 && S.Ncap + S.nQueue.length * 20 < d.Ed * (d.elec - d.maxR) + 20 && Sept.nucCost(S) < S.treasury * 0.5) A.buildNuc(S);
     if (S.debt > 0 && S.treasury > Sept.borrowAmount(S) * 2) A.repay(S);
     if (S.research.adapt && Sept.digueCost(S) < S.treasury * 0.2 && S.SL > 0.3) A.buyDigue(S);
     if (S.research.adapt && Sept.climCost(S) < S.treasury * 0.1 && S.T > 1.4) A.buyClim(S);
