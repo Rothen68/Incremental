@@ -233,7 +233,10 @@
     { id: 'geo', y: 2040, cost: 400, name: 'Aérosols stratosphériques', desc: 'Voiler le soleil pour refroidir la Terre. Peu cher, rapide. Il faudra continuer chaque année, et toutes les générations après vous aussi.',
       effect: (S) => log(S, 'Les avions sont prêts. Il suffit de régler la jauge.', 'sys') },
     { id: 'fusion', y: 2045, cost: 3000, name: 'Fusion nucléaire', desc: 'Une énergie propre et presque illimitée. Disponible dans trente ans. (Elle l’est depuis 1950.)',
-      effect: (S) => { S.fusionAt = Math.floor(S.year) + 40; } },
+      effect: (S) => {
+        S.fusionAt = Math.floor(S.year) + 40;
+        log(S, `Le programme de fusion est lancé. Premiers réacteurs promis pour ${S.fusionAt - 10}.`, 'sci');
+      } },
     { id: 'dac2', y: 2060, cost: 1500, req: 'dac', name: 'Captage à grande échelle', desc: 'Chaque machine de captage retire trois fois plus de CO₂.' },
   ];
   const RES_BY_ID = {};
@@ -392,6 +395,10 @@
       }
     }
     if (y === 2026 && !S.flags.now) { S.flags.now = true; S.flags.showNow = true; }
+    if (S.fusionAt && y >= S.fusionAt - 10 && !S.flags.fusionLate) {
+      S.flags.fusionLate = true;
+      log(S, `La fusion n’est pas prête. Encore dix ans, promis : ${S.fusionAt}.`, 'sci');
+    }
     if (S.fusionAt && y >= S.fusionAt && !S.flags.fusionReady) {
       S.flags.fusionReady = true;
       log(S, 'La fusion fonctionne. Enfin. Elle arrive après la bataille, mais elle arrive.', 'sci');

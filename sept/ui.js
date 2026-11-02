@@ -287,6 +287,11 @@
     }
     show('b-fus', !!S.flags.fusionReady);
     if (S.flags.fusionReady) { set('c-fus', money(Sept.fusionCost() * q)); enable('b-fus', S.treasury >= Sept.fusionCost()); }
+    show('r-fus', !!S.fusionAt);
+    if (S.fusionAt) {
+      set('v-fus', S.flags.fusionReady ? 'fusion : 50 unités par réacteur, sans CO₂ ni déchets à vie longue'
+        : `fusion : en recherche · premiers réacteurs promis pour ${S.flags.fusionLate ? S.fusionAt : S.fusionAt - 10}`);
+    }
     set('c-close', money(Sept.closeCost() * q));
     enable('b-close', d.plants > 0 && S.treasury >= Sept.closeCost());
     $('t-market').checked = S.market;
