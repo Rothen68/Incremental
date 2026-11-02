@@ -34,6 +34,9 @@
   bind('b-dig', () => A.buyDigue(S));
   bind('b-clim', () => A.buyClim(S));
   bind('b-dac', () => A.buyDac(S));
+  bind('b-lab', () => A.buyLab(S));
+  bind('b-share', () => A.shareScience(S));
+  $('i-aid').addEventListener('input', (e) => { A.setAid(S, e.target.value / 1000); after(); });
   bind('b-dacstop', () => A.stopDac(S));
   $('t-market').addEventListener('change', () => { A.toggleMarket(S); after(); });
   $('i-sob').addEventListener('input', (e) => { A.setSobriety(S, e.target.value / 100); after(); });
@@ -47,6 +50,10 @@
   document.querySelectorAll('.qty button').forEach((b) => b.addEventListener('click', () => { A.setQty(S, +b.dataset.qty); after(); }));
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT' && $('modal').classList.contains('hide')) { e.preventDefault(); S.paused = !S.paused; after(); }
+  });
+  $('treaties').addEventListener('click', (e) => {
+    const el = e.target.closest('.res');
+    if (el && A.research(S, el.dataset.id)) after();
   });
   $('research').addEventListener('click', (e) => {
     const el = e.target.closest('.res');
@@ -67,21 +74,26 @@
   });
 
   // ---------- recherche ----------
-  let resSig = '';
   const seen = new Set(S.flags.seenRes || []);
+  const UNIT = { science: 'science', treasury: 'Md€', influence: 'influence' };
+  const priceText = (p) => { const c = Sept.priceOf(p); return fmt(c.amount) + ' ' + UNIT[c.pool]; };
+  const listSig = {};
   function renderResearch() {
-    const vis = Sept.visibleResearch(S);
+    renderList('research', Sept.visibleResearch(S), Sept.RESEARCH);
+    set('v-nores', Sept.visibleResearch(S).length ? '' : 'Rien de nouveau pour l’instant. Le monde avance.');
+  }
+  function renderList(boxId, vis, all) {
     const sig = vis.map((p) => p.id).join('|');
-    const box = $('research');
-    if (sig !== resSig) {
-      resSig = sig;
+    const box = $(boxId);
+    if (sig !== listSig[boxId]) {
+      listSig[boxId] = sig;
       box.innerHTML = '';
       for (const p of vis) {
         const el = document.createElement('div');
         el.className = 'res' + (seen.has(p.id) ? '' : ' new');
         el.dataset.id = p.id;
         el.innerHTML = '<span class="rc"></span><div><span class="ry"></span><span class="rn"></span></div><div class="rd"></div>';
-        el.querySelector('.rc').textContent = money(p.cost);
+        el.querySelector('.rc').textContent = priceText(p);
         el.querySelector('.ry').textContent = p.y;
         el.querySelector('.rn').textContent = p.name;
         el.querySelector('.rd').textContent = p.desc;
@@ -91,10 +103,10 @@
       S.flags.seenRes = [...seen];
     }
     for (const el of box.children) {
-      const p = Sept.RESEARCH.find((q) => q.id === el.dataset.id);
-      el.classList.toggle('off', S.treasury < p.cost);
+      const p = all.find((q) => q.id === el.dataset.id);
+      const c = Sept.priceOf(p);
+      el.classList.toggle('off', S[c.pool] < c.amount);
     }
-    set('v-nores', vis.length ? '' : 'Rien de nouveau pour l’instant. Le monde avance.');
   }
 
   // ---------- journal ----------
@@ -309,7 +321,7 @@
     if (r.keeling) {
       set('v-ppm', nf(d.ppm) + ' ppm');
       set('v-E', nf(d.net, 1) + ' Gt CO₂/an');
-      set('v-Esplit', `${nf(d.fossilEm, 1)} · ${nf(d.otherEm, 1)} · ${nf(d.tipEm, 1)}` + (d.removal > 0 ? ` · −${nf(d.removal, 1)} captés` : ''));
+      set('v-Esplit', `${nf(d.Eyou, 1)} · ${nf(d.Eworld, 1)} · ${nf(d.tipEm, 1)}` + (d.removal > 0 ? ` · −${nf(d.removal, 1)} captés` : ''));
     }
     show('c-temp', !!r.models);
     if (r.models) {
@@ -331,6 +343,33 @@
       $('tips').innerHTML = '';
       for (const t of tipsTxt ? tipsTxt.split('|') : []) { const li = document.createElement('li'); li.textContent = t; $('tips').appendChild(li); }
     }
+
+    // le monde
+    set('v-P', pct(d.P, 0));
+    set('v-cY', pct(d.cY, 0)); set('v-cW', pct(S.cW, 0));
+    for (const [id, v] of [['bar-cY', d.cY], ['bar-cW', S.cW]]) { const w = Math.round(v * 1000) / 10 + '%'; if (cache[id] !== w) { cache[id] = w; $(id).style.width = w; } }
+    set('v-k', nf(d.k * 100, 1) + ' %/an');
+    const why = [];
+    if (d.pull) why.push('le propre est devenu rentable');
+    if (d.cY <= S.cW + 0.01) why.push(d.cY < 0.05 ? 'vous ne montrez encore aucun exemple' : 'il vous a rattrapé');
+    else if (!r.transfer && d.cWtarget < d.cY) why.push('sans transferts, il ne peut pas électrifier autant que vous');
+    set('v-why', why.join(' · '));
+    set('v-inf', nf(S.influence, 0) + ` (${d.inflRate >= 0 ? '+' : '−'}${nf(Math.abs(d.inflRate), 1)}/an)`);
+    show('b-share', S.year >= 1972);
+    enable('b-share', S.science >= 50);
+    show('r-aid', !!r.greenfund);
+    if (r.greenfund) {
+      set('v-aid', pct(S.aid, 1) + ' · ' + money(d.aidMoney) + '/an');
+      if (document.activeElement !== $('i-aid')) $('i-aid').value = Math.round(S.aid * 1000);
+    }
+    renderList('treaties', Sept.visibleTreaties(S), Sept.TREATIES);
+    set('v-notreaty', Sept.visibleTreaties(S).length ? '' : (S.year < 1972 ? 'Aucune conférence mondiale sur l’environnement avant 1972.' : 'Aucune négociation en cours.'));
+
+    // science
+    set('v-sci', nf(S.science, 0) + ` (+${nf(d.sciRate, 1)}/an)`);
+    set('c-lab', money(Sept.labCost(S)));
+    enable('b-lab', S.treasury >= Sept.labCost(S));
+    set('v-labs', `${S.labs} laboratoires · chacun +1,5 science/an et un peu d’influence`);
 
     show('p-act', !!(r.adapt || r.dac || r.geo));
     show('r-adapt', !!r.adapt);
@@ -407,6 +446,7 @@
         + `<div class="row"><span>Montée des eaux depuis 1950</span><b>+${Math.round((S.SL - 0.07) * 100)} cm</b></div>`
         + `<div class="row"><span>CO₂ net émis depuis 1950</span><b>${fmt(S.cum - Sept.C.CUM0)} Gt</b></div>`
         + `<div class="row"><span>Points de bascule franchis</span><b>${Object.keys(S.tip).length} / 5</b></div>`
+        + `<div class="row"><span>Énergie propre : vous · reste du monde</span><b>${pct(Sept.derive(S).cY, 0)} · ${pct(S.cW, 0)}</b></div>`
         + '<div class="row muted"><span>Notre monde réel, politiques actuelles, en 2100</span><b>≈ +2,7 à +3,1 °C</b></div>'
         + Sept.GENS.map((g, i) => `<div class="row"><span>Bien-être moyen · ${g.name}</span><b>${nf(Sept.genAvg(S, i), 1)}</b></div>`).join('')
         + '</div>';

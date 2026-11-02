@@ -34,6 +34,8 @@
       research: {}, flags: {}, effects: [], shock: 0,
       log: [], hist: [], genW: [], genStart: [],
       qty: 1, lastYear: C.START, fusionAt: 0, renYear: 0, fusYear: 0,
+      science: 5, labs: 0, influence: 0, aid: 0,
+      cW: 0, wEff: 1, wO: 1, // le reste du monde : part d'énergie propre, efficacité, émissions des sols
       lastSave: Date.now(),
     };
   }
@@ -58,6 +60,7 @@
   const digueCost = (S) => 30 * (1 + S.digues * 8) * Math.max(1, S.Y / 2000);
   const climCost = (S) => 20 * Math.pow(1.25, S.clim);
   const closeCost = () => 5;
+  const labCost = (S) => 20 * Math.pow(1.2, S.labs);
   function borrowAmount(S) { return Math.round(S.Y * 0.3); }
 
   // Les filières industrielles limitent ce qu'on peut installer chaque année.
@@ -73,7 +76,8 @@
     d.plants = fossilPlants(S);
     d.F = d.plants * C.PLANT;
     d.effMult = (r.eff1 ? 0.85 : 1) * (r.eff2 ? 0.85 : 1) * (r.eff3 ? 0.85 : 1) * (r.heatpump ? 0.85 : 1);
-    d.intensity = Math.pow(0.995, Math.min(S.year, 2000) - C.START) * Math.pow(0.988, Math.max(0, S.year - 2000)) * d.effMult * (1 - 0.35 * S.sobriety)
+    d.baseIntensity = Math.pow(0.995, Math.min(S.year, 2000) - C.START) * Math.pow(0.988, Math.max(0, S.year - 2000));
+    d.intensity = d.baseIntensity * d.effMult * (1 - 0.35 * S.sobriety)
       * (1 - 0.15 * S.cp / 200) * (1 + 0.03 * S.clim);
     d.Ed = S.Y * d.intensity + S.dac * 15; // le captage consomme beaucoup d'énergie
     d.maxShareR = 0.4 + (r.storage1 ? 0.25 : 0) + (r.storage2 ? 0.25 : 0);
@@ -90,7 +94,18 @@
     d.fossilEm = d.fossilUsed * C.FOSSIL_EF;
     d.otherEm = C.OTHER_EM * (r.forests ? 0.4 : 1);
     d.tipEm = (S.tip.permafrost ? 1.5 + Math.min(1.5, (S.year - S.tipYears.permafrost) * 0.02) : 0) + (S.tip.amazon ? 2 : 0);
-    d.E = d.fossilEm + d.otherEm + d.tipEm;
+    // le reste du monde : même économie que la vôtre, mais il ne copie vos choix qu'à son rythme
+    d.P = 0.65 - 0.35 * clamp((S.year - C.START) / 100, 0, 1); // part de votre bloc dans l'économie mondiale
+    d.cY = d.Ed > 0 ? (d.Ruse + d.Fuse + d.Nuse) / d.Ed : 0;
+    d.EdW = S.Y * d.baseIntensity * S.wEff;
+    d.Eyou = d.P * (d.fossilEm + d.otherEm);
+    d.Eworld = (1 - d.P) * (d.EdW * (1 - S.cW) * C.FOSSIL_EF + C.OTHER_EM * S.wO);
+    d.E = d.Eyou + d.Eworld + d.tipEm;
+    d.pull = renCost(S) < fossilCost(S) ? 0.02 : 0; // le propre est devenu rentable : il se diffuse seul
+    d.k = 0.005 + d.pull + TREATIES.reduce((a, t) => a + (r[t.id] && t.k ? t.k : 0), 0)
+      + S.aid * 0.5 + (r.cbam ? 0.03 * S.cp / 200 : 0);
+    d.elecW = r.transfer ? d.elec : Math.max(0.5, d.elec - 0.15);
+    d.cWtarget = Math.min(d.cY, d.elecW);
     d.removal = S.dac * 0.5 * (r.dac2 ? 2 : 1);
     d.net = d.E - d.removal;
     d.ppm = C.PPM0 + C.PPM_K * S.cum;
@@ -106,7 +121,10 @@
     d.dacUpkeep = S.dac * 20;
     d.interest = S.debt * 0.03;
     d.income = S.Y * 0.15 + d.taxRev;
-    d.netIncome = d.income - d.geoUpkeep - d.dacUpkeep - d.interest;
+    d.aidMoney = S.aid * d.income;
+    d.netIncome = d.income - d.geoUpkeep - d.dacUpkeep - d.interest - d.aidMoney;
+    d.sciRate = 1 + 1.5 * S.labs;
+    d.inflRate = 0.3 + 2 * d.cY + 0.05 * S.labs + d.aidMoney * 0.04 - (r.cbam ? 0.5 : 0);
 
     // bien-être
     const Yc = S.Y * (1 - 0.25 * S.sobriety);
@@ -197,9 +215,16 @@
     setGeo(S, v) { if (S.research.geo) { S.geoTarget = clamp(+v, 0, 1.5); if (S.geoTarget > 0) S.flags.geoUsed = true; } },
     setQty(S, q) { S.qty = q; },
     toggleMarket(S) { S.market = !S.market; },
+    buyLab(S) { return repeat(S, () => { if (!spend(S, labCost(S))) return false; S.labs++; return true; }); },
+    // coopération scientifique : partager des résultats rapporte de l'influence
+    shareScience(S) { return repeat(S, () => { if (S.year < 1972 || S.science < 50) return false; S.science -= 50; S.influence += 5; return true; }); },
+    setAid(S, v) { if (S.research.greenfund) S.aid = clamp(+v, 0, 0.05); },
     research(S, id) {
-      const p = RES_BY_ID[id];
-      if (!p || !researchVisible(S, p) || !spend(S, p.cost)) return false;
+      const p = RES_BY_ID[id] || TREATY_BY_ID[id];
+      if (!p || !(RES_BY_ID[id] ? researchVisible(S, p) : treatyVisible(S, p))) return false;
+      const c = priceOf(p);
+      if (S[c.pool] < c.amount - 1e-9) return false;
+      S[c.pool] -= c.amount;
       S.research[id] = true;
       if (p.effect) p.effect(S);
       return true;
@@ -224,45 +249,69 @@
 
   // ---------- recherche ----------
   const RESEARCH = [
-    { id: 'nuclear', y: 1953, cost: 60, name: 'Programme nucléaire civil', desc: '« L’atome pour la paix. » Débloque les centrales nucléaires : sans CO₂, chères, lentes à construire, et leurs déchets durent plus longtemps que toutes les générations de ce jeu.' },
-    { id: 'pv', y: 1954, cost: 40, name: 'Cellule photovoltaïque', desc: 'Un laboratoire transforme la lumière en électricité. C’est hors de prix. Débloque les renouvelables ; leur prix baisse à chaque installation, pour toutes les générations suivantes.' },
-    { id: 'keeling', y: 1958, cost: 15, name: 'Mesurer le CO₂', desc: 'Installer un instrument au sommet d’un volcan, à Hawaï, et noter un chiffre chaque jour.',
+    { id: 'nuclear', y: 1953, sci: 12, name: 'Programme nucléaire civil', desc: '« L’atome pour la paix. » Débloque les centrales nucléaires : sans CO₂, chères, lentes à construire, et leurs déchets durent plus longtemps que toutes les générations de ce jeu.' },
+    { id: 'pv', y: 1954, sci: 8, name: 'Cellule photovoltaïque', desc: 'Un laboratoire transforme la lumière en électricité. C’est hors de prix. Débloque les renouvelables ; leur prix baisse à chaque installation, pour toutes les générations suivantes.' },
+    { id: 'keeling', y: 1958, sci: 3, name: 'Mesurer le CO₂', desc: 'Installer un instrument au sommet d’un volcan, à Hawaï, et noter un chiffre chaque jour.',
       effect: (S) => log(S, 'Le premier relevé tombe : 315 ppm. Personne ne sait encore si c’est beaucoup.', 'sci') },
-    { id: 'models', y: 1967, cost: 50, req: 'keeling', name: 'Modèles du climat', desc: 'Calculer ce que fait le CO₂ à la température. Révèle le réchauffement et la montée des eaux.',
+    { id: 'models', y: 1967, sci: 10, req: 'keeling', name: 'Modèles du climat', desc: 'Calculer ce que fait le CO₂ à la température. Révèle le réchauffement et la montée des eaux.',
       effect: (S) => log(S, `Les modèles sont formels : la Terre s’est déjà réchauffée de ${fmtT(S.T)} depuis l’ère préindustrielle.`, 'sci') },
-    { id: 'filters', y: 1970, cost: 80, name: 'Filtres et pots catalytiques', desc: 'Respirer mieux. La pollution de l’air fossile pèse 60 % de moins sur le bien-être. Ne change rien au CO₂.' },
-    { id: 'meadows', y: 1972, cost: 20, name: 'Les limites à la croissance', desc: 'Lire un rapport qui pose une question gênante. Débloque la sobriété.' },
-    { id: 'eff1', y: 1974, cost: 80, name: 'Économies d’énergie', desc: 'Isoler, régler, éteindre. Besoins en énergie −15 %.' },
-    { id: 'wind', y: 1980, cost: 120, req: 'pv', name: 'Éolien moderne', desc: 'Des pales de cinquante mètres. Renouvelables encore moins chers.' },
-    { id: 'giec', y: 1988, cost: 60, req: 'models', name: 'Créer le GIEC', desc: 'Réunir les scientifiques du monde entier. Révèle la trajectoire projetée et le budget carbone restant.',
+    { id: 'filters', y: 1970, sci: 16, name: 'Filtres et pots catalytiques', desc: 'Respirer mieux. La pollution de l’air fossile pèse 60 % de moins sur le bien-être. Ne change rien au CO₂.' },
+    { id: 'meadows', y: 1972, sci: 4, name: 'Les limites à la croissance', desc: 'Lire un rapport qui pose une question gênante. Débloque la sobriété.' },
+    { id: 'eff1', y: 1974, sci: 16, name: 'Économies d’énergie', desc: 'Isoler, régler, éteindre. Besoins en énergie −15 %.' },
+    { id: 'wind', y: 1980, sci: 24, req: 'pv', name: 'Éolien moderne', desc: 'Des pales de cinquante mètres. Renouvelables encore moins chers.' },
+    { id: 'giec', y: 1988, sci: 12, req: 'models', name: 'Créer le GIEC', desc: 'Réunir les scientifiques du monde entier. Révèle la trajectoire projetée et le budget carbone restant.',
       effect: (S) => log(S, 'Premier rapport du GIEC : « Les émissions humaines augmentent substantiellement les concentrations de gaz à effet de serre. »', 'sci') },
     { id: 'carbontax', y: 1991, cost: 50, name: 'Prix du carbone', desc: 'Faire payer chaque tonne émise. Rapporte de l’argent, rend le fossile moins attractif, réduit un peu la demande. Et met des gens en colère.' },
-    { id: 'eff2', y: 1995, cost: 200, req: 'eff1', name: 'Rénovation des bâtiments', desc: 'Besoins en énergie −15 %.' },
+    { id: 'eff2', y: 1995, sci: 40, req: 'eff1', name: 'Rénovation des bâtiments', desc: 'Besoins en énergie −15 %.' },
     { id: 'adapt', y: 2000, cost: 120, name: 'Plan d’adaptation', desc: 'Accepter que le climat a déjà changé. Débloque digues et climatisation.' },
-    { id: 'storage1', y: 2005, cost: 250, req: 'pv', name: 'Batteries', desc: 'Stocker le soleil de midi pour le soir. Part maximale des renouvelables : 40 % → 65 %.' },
+    { id: 'storage1', y: 2005, sci: 50, req: 'pv', name: 'Batteries', desc: 'Stocker le soleil de midi pour le soir. Part maximale des renouvelables : 40 % → 65 %.' },
     { id: 'dividend', y: 2008, cost: 150, req: 'carbontax', name: 'Dividende carbone', desc: 'Rendre l’argent de la taxe aux ménages. La colère retombe, le budget aussi.' },
-    { id: 'ev', y: 2008, cost: 250, name: 'Véhicules électriques', desc: 'Brancher les voitures et les camions. Part des besoins couverte par l’électricité propre +15 %.' },
-    { id: 'heatpump', y: 2010, cost: 300, name: 'Pompes à chaleur', desc: 'Chauffer à l’électricité, trois fois mieux. Besoins −15 %, part électrifiable +10 %.' },
-    { id: 'forests', y: 2015, cost: 400, name: 'Forêts et agroécologie', desc: 'Arrêter la déforestation, changer les sols. Émissions hors énergie −60 %.' },
-    { id: 'storage2', y: 2020, cost: 600, req: 'storage1', name: 'Stockage saisonnier', desc: 'Garder l’été pour l’hiver. Part maximale des renouvelables : 90 %.' },
-    { id: 'dac', y: 2022, cost: 500, name: 'Captage direct du CO₂', desc: 'Des machines qui aspirent le CO₂ de l’air. Chères à faire tourner, et très gourmandes en énergie : alimentées au fossile, elles émettent plus qu’elles ne captent. Mais elles font reculer le compteur.' },
-    { id: 'greensteel', y: 2025, cost: 700, name: 'Acier et ciment bas carbone', desc: 'Réinventer l’industrie lourde. Part électrifiable +10 %.' },
-    { id: 'h2', y: 2032, cost: 900, req: 'greensteel', name: 'Hydrogène vert', desc: 'Pour ce qui ne se branche pas : engrais, chimie, navires. Part électrifiable +10 %.' },
-    { id: 'synfuel', y: 2050, cost: 1500, req: 'h2', name: 'Carburants de synthèse', desc: 'Des avions qui volent avec de l’air et du soleil. Très cher. Part électrifiable +5 %.' },
-    { id: 'eff3', y: 2030, cost: 800, req: 'eff2', name: 'Sobriété technique', desc: 'Des objets qui durent. Besoins en énergie −15 %.' },
-    { id: 'geo', y: 2040, cost: 400, name: 'Aérosols stratosphériques', desc: 'Voiler le soleil pour refroidir la Terre. Peu cher, rapide. Il faudra continuer chaque année, et toutes les générations après vous aussi.',
+    { id: 'ev', y: 2008, sci: 50, name: 'Véhicules électriques', desc: 'Brancher les voitures et les camions. Part des besoins couverte par l’électricité propre +15 %.' },
+    { id: 'heatpump', y: 2010, sci: 60, name: 'Pompes à chaleur', desc: 'Chauffer à l’électricité, trois fois mieux. Besoins −15 %, part électrifiable +10 %.' },
+    { id: 'forests', y: 2015, cost: 400, name: 'Forêts et agroécologie', desc: 'Arrêter la déforestation chez vous, changer les sols. Émissions hors énergie de votre bloc −60 %.' },
+    { id: 'storage2', y: 2020, sci: 120, req: 'storage1', name: 'Stockage saisonnier', desc: 'Garder l’été pour l’hiver. Part maximale des renouvelables : 90 %.' },
+    { id: 'dac', y: 2022, sci: 100, name: 'Captage direct du CO₂', desc: 'Des machines qui aspirent le CO₂ de l’air. Chères à faire tourner, et très gourmandes en énergie : alimentées au fossile, elles émettent plus qu’elles ne captent. Mais elles font reculer le compteur.' },
+    { id: 'greensteel', y: 2025, sci: 140, name: 'Acier et ciment bas carbone', desc: 'Réinventer l’industrie lourde. Part électrifiable +10 %.' },
+    { id: 'h2', y: 2032, sci: 180, req: 'greensteel', name: 'Hydrogène vert', desc: 'Pour ce qui ne se branche pas : engrais, chimie, navires. Part électrifiable +10 %.' },
+    { id: 'synfuel', y: 2050, sci: 300, req: 'h2', name: 'Carburants de synthèse', desc: 'Des avions qui volent avec de l’air et du soleil. Très cher. Part électrifiable +5 %.' },
+    { id: 'eff3', y: 2030, sci: 160, req: 'eff2', name: 'Sobriété technique', desc: 'Des objets qui durent. Besoins en énergie −15 %.' },
+    { id: 'geo', y: 2040, sci: 80, name: 'Aérosols stratosphériques', desc: 'Voiler le soleil pour refroidir la Terre. Peu cher, rapide. Il faudra continuer chaque année, et toutes les générations après vous aussi.',
       effect: (S) => log(S, 'Les avions sont prêts. Il suffit de régler la jauge.', 'sys') },
-    { id: 'fusion', y: 2045, cost: 3000, name: 'Fusion nucléaire', desc: 'Une énergie propre, presque illimitée, sans déchets à vie longue. Disponible dans trente ans. (Elle l’est depuis 1950.)',
+    { id: 'fusion', y: 2045, sci: 600, name: 'Fusion nucléaire', desc: 'Une énergie propre, presque illimitée, sans déchets à vie longue. Disponible dans trente ans. (Elle l’est depuis 1950.)',
       effect: (S) => {
         S.fusionAt = Math.floor(S.year) + 40;
         log(S, `Le programme de fusion est lancé. Premiers réacteurs promis pour ${S.fusionAt - 10}.`, 'sci');
       } },
-    { id: 'dac2', y: 2060, cost: 1500, req: 'dac', name: 'Captage à grande échelle', desc: 'Chaque machine de captage retire deux fois plus de CO₂, pour la même énergie.' },
+    { id: 'dac2', y: 2060, sci: 300, req: 'dac', name: 'Captage à grande échelle', desc: 'Chaque machine de captage retire deux fois plus de CO₂, pour la même énergie.' },
   ];
   const RES_BY_ID = {};
   RESEARCH.forEach((p) => { RES_BY_ID[p.id] = p; });
   function researchVisible(S, p) { return !S.research[p.id] && S.year >= p.y && (!p.req || S.research[p.req]); }
   function visibleResearch(S) { return RESEARCH.filter((p) => researchVisible(S, p)); }
+
+  // ---------- diplomatie ----------
+  const TREATIES = [
+    { id: 'stockholm', y: 1972, inf: 3, k: 0.005, name: 'Conférence de Stockholm', desc: 'Mettre l’environnement à l’agenda du monde. Le reste du monde vous imite un peu plus vite.' },
+    { id: 'rio', y: 1992, inf: 8, k: 0.005, name: 'Convention climat de Rio', desc: 'Tous les pays reconnaissent le problème. Personne ne s’engage encore à rien.' },
+    { id: 'kyoto', y: 1997, inf: 15, k: 0.01, req: 'rio', name: 'Protocole de Kyoto', desc: 'Des objectifs chiffrés pour les pays riches. Les autres regardent si vous les tenez.' },
+    { id: 'greenfund', y: 2009, inf: 20, req: 'rio', name: 'Fonds vert pour le climat', desc: 'Promettre de l’argent aux pays qui n’ont pas causé le problème. Débloque le financement climat : chaque euro versé accélère leur transition et vous rapporte de l’influence.' },
+    { id: 'paris', y: 2015, inf: 30, k: 0.01, req: 'rio', name: 'Accord de Paris', desc: 'Tout le monde s’engage, personne n’est contraint. « Bien en dessous de 2 °C. »' },
+    { id: 'transfer', y: 2018, inf: 35, req: 'paris', name: 'Transferts de technologie', desc: 'Partager vos brevets. Le reste du monde peut électrifier autant que vous, et plus seulement ce qu’il sait faire.' },
+    { id: 'coal', y: 2025, inf: 40, k: 0.015, req: 'paris', name: 'Sortie mondiale du charbon', desc: 'Une date, pour tout le monde. Le reste du monde vous imite plus vite.' },
+    { id: 'cbam', y: 2026, inf: 30, req: 'carbontax', name: 'Carbone aux frontières', desc: 'Votre prix du carbone s’applique aussi aux importations. Plus il est élevé, plus le reste du monde suit. Mais il vous en veut un peu : influence −0,5/an.' },
+    { id: 'forestpact', y: 2030, inf: 50, req: 'greenfund', name: 'Pacte mondial des forêts', desc: 'Payer pour que les forêts restent debout. Émissions des sols du reste du monde −60 %.' },
+    { id: 'globalprice', y: 2045, inf: 100, k: 0.04, req: 'paris', name: 'Prix mondial du carbone', desc: 'Le même prix partout. Le reste du monde vous rattrape vite.' },
+  ];
+  const TREATY_BY_ID = {};
+  TREATIES.forEach((p) => { TREATY_BY_ID[p.id] = p; });
+  function treatyVisible(S, p) { return !S.research[p.id] && S.year >= p.y && (!p.req || S.research[p.req]); }
+  function visibleTreaties(S) { return TREATIES.filter((p) => treatyVisible(S, p)); }
+  // Ce que coûte une recherche ou un traité : science, argent ou influence.
+  function priceOf(p) {
+    if (p.inf !== undefined) return { pool: 'influence', amount: p.inf };
+    if (p.sci !== undefined) return { pool: 'science', amount: p.sci };
+    return { pool: 'treasury', amount: p.cost };
+  }
 
   // ---------- histoire réelle (jusqu'à aujourd'hui) ----------
   // Les événements climatiques réels n'arrivent que si le monde du jeu est assez chaud.
@@ -275,11 +324,11 @@
     { y: 1979, msg: 'Rapport Charney : doubler le CO₂ réchaufferait la Terre d’environ 3 °C. « Attendre pour voir » pourrait être trop tard.' },
     { y: 1988, msg: 'Un climatologue déclare devant le Sénat américain que le réchauffement a commencé.' },
     { y: 1992, msg: 'Sommet de la Terre à Rio. Les pays promettent de « prévenir toute perturbation dangereuse » du climat.' },
-    { y: 1997, msg: 'Protocole de Kyoto. Les pays riches s’engagent à réduire leurs émissions de 5 %.' },
+    { y: 1997, msg: 'Négociations à Kyoto : les pays riches pourraient s’engager à réduire leurs émissions.' },
     { y: 2003, cond: (S) => S.T >= 0.85, msg: 'Canicule en Europe : 70 000 morts.', w: 3,
       alt: 'Dans ce monde-ci, l’été est doux en Europe. (Dans le nôtre, 70 000 personnes sont mortes de chaud en Europe.)' },
     { y: 2009, msg: 'Conférence de Copenhague. On ne s’accorde sur rien, sinon sur le fait de se revoir.' },
-    { y: 2015, msg: 'Accord de Paris : contenir le réchauffement « bien en dessous de 2 °C », en visant 1,5 °C.', fn: (S) => { S.flags.paris = true; } },
+    { y: 2015, msg: 'Négociations à Paris : contenir le réchauffement « bien en dessous de 2 °C », en visant 1,5 °C.' },
     { y: 2019, cond: (S) => S.T >= 1.0, msg: 'Méga-feux en Australie : un milliard d’animaux morts.', w: 2,
       alt: 'L’Australie connaît une saison des feux ordinaire. (Dans le nôtre, un milliard d’animaux y sont morts.)' },
     { y: 2022, cond: (S) => S.T >= 1.05, msg: 'Inondations au Pakistan : un tiers du pays sous l’eau.', w: 2,
@@ -375,6 +424,11 @@
       if (S.year >= S.nQueue[i].at) { S.Ncap += S.nQueue[i].cap; S.nQueue.splice(i, 1); }
     }
     S.effects = S.effects.filter((e) => e.until > S.year);
+    S.science += d.sciRate * dt;
+    S.influence = Math.max(0, S.influence + d.inflRate * dt);
+    if (d.cWtarget > S.cW) S.cW += (d.cWtarget - S.cW) * Math.min(1, d.k * dt);
+    if (d.effMult < S.wEff) S.wEff += (d.effMult - S.wEff) * Math.min(1, (0.02 + d.k) * dt);
+    S.wO += ((S.research.forestpact ? 0.4 : 1) - S.wO) * Math.min(1, 0.07 * dt);
     // bien-être cumulé de la génération
     const g = S.genW[S.gen] || (S.genW[S.gen] = { sum: 0, n: 0, min: Infinity, max: -Infinity });
     g.sum += d.W * dt; g.n += dt; g.min = Math.min(g.min, d.W); g.max = Math.max(g.max, d.W);
@@ -436,7 +490,7 @@
 
   function snapshot(S) {
     const d = derive(S);
-    return { year: Math.floor(S.year), T: S.T, cum: S.cum, SL: S.SL, Y: S.Y, debt: S.debt, ren: renCost(S), plants: d.plants, waste: S.waste, mask: S.mask, tips: Object.keys(S.tip).length, E: d.E };
+    return { year: Math.floor(S.year), T: S.T, cum: S.cum, SL: S.SL, Y: S.Y, debt: S.debt, ren: renCost(S), plants: d.plants, waste: S.waste, mask: S.mask, tips: Object.keys(S.tip).length, E: d.E, cY: d.cY, cW: S.cW };
   }
 
   function endGeneration(S) {
@@ -465,7 +519,7 @@
   function wipe() { try { localStorage.removeItem(C.SAVE_KEY); } catch (e) { /* rien */ } }
 
   root.Sept = {
-    C, GENS, END, newState, derive, tick, advance, A, RESEARCH, visibleResearch,
+    C, GENS, END, newState, derive, tick, advance, A, RESEARCH, visibleResearch, TREATIES, visibleTreaties, priceOf, labCost,
     renRoom, fusRoom, fossilCost, renCost, nucCost, fusionCost, industryCost, serviceCost, dacCost, digueCost, climCost, closeCost, borrowAmount,
     fossilPlants, genAvg, fmtT, save, load, wipe, log,
   };

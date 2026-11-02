@@ -79,6 +79,8 @@
       const list = newTips.map((k) => TIP_NAMES[k]).filter(Boolean);
       P.push('De mon vivant, ' + list.join(', ') + '. Ça, personne ne pourra le rattraper.');
     }
+    if (end.cY > 0.5 && end.cW < end.cY - 0.3) P.push('Nous avons fait notre part. Le reste du monde, lui, se développe comme nous l’avons fait : au charbon. De quel droit le lui reprocher ?');
+    else if (end.cW > 0.5 && start.cW <= 0.5) P.push('Le reste du monde a suivi. Plus lentement qu’on l’espérait, mais il a suivi.');
     if (end.SL - start.SL > 0.1) P.push(`La mer est montée de ${cm(end.SL - start.SL)} depuis ma naissance.`);
 
     const w = Sept.genAvg(S, g), wPrev = g > 0 ? Sept.genAvg(S, g - 1) : null;
@@ -104,6 +106,9 @@
     else if (S.SL > 0.6) add.push(`La mer est montée de ${cm(S.SL - 0.07)} depuis la naissance de Jeanne. Elle continuera longtemps après moi.`);
     if (S.waste > 1) add.push('Nous gardons vos déchets nucléaires. Nos enfants les garderont aussi.');
     if (S.debt > S.Y * 0.5) add.push('Nous remboursons encore vos dettes.');
+    const cY = Sept.derive(S).cY;
+    if (cY > 0.8 && S.cW < 0.6) add.push('Vous aviez montré le chemin. Le monde ne l’a pas pris assez vite. On ne gagne pas seul contre le climat.');
+    else if (S.cW > 0.9 && S.research.paris) add.push('Le monde entier a fini par changer. Ça a commencé par des réunions interminables, paraît-il.');
     const w0 = Sept.genAvg(S, 0), w6 = Sept.genAvg(S, 6);
     if (w6 < w0) add.push('Je vis moins bien que Jeanne. Elle avait tellement moins que moi, et pourtant.');
     else if (w6 > Math.max(...[1, 2, 3, 4, 5].map((g) => Sept.genAvg(S, g)))) add.push('Je crois que j’ai eu plus de chance que vous tous. Je ne l’ai pas mérité. Vous, si.');
@@ -119,7 +124,7 @@
       paragraphs: [
         'Jusqu’ici, le monde de ce jeu suivait à peu près le nôtre. Les mêmes rapports, les mêmes sommets, les mêmes promesses.',
         'Dans notre monde, en 2026, la Terre s’est réchauffée d’environ +1,4 °C. ' + (known ? `Dans le vôtre : ${T(S.T)}.` : 'Dans le vôtre, personne ne le sait : aucune génération n’a financé les modèles du climat.'),
-        'Vous avez joué avec deux avantages que personne n’a jamais eus : connaître la suite, et décider seul pour toute la planète.',
+        'Vous avez joué avec un avantage que personne n’a jamais eu : connaître la suite. Le reste du monde, lui, ne la connaît pas.',
         'À partir de maintenant, rien n’est écrit.',
       ],
     };

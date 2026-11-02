@@ -58,6 +58,24 @@
           <input type="range" id="i-cp" min="0" max="200" step="5">
         </div>
       </div>
+      <div class="panel hide" id="p-act">
+        <h2>Agir sur le climat</h2>
+        <div class="hide" id="r-adapt">
+          <button id="b-dig" class="buy"><span>Digues</span><span class="c" id="c-dig"></span></button>
+          <div class="row small muted"><span>protection côtière</span><b id="v-dig"></b></div>
+          <button id="b-clim" class="buy"><span>Climatisation</span><span class="c" id="c-clim"></span></button>
+          <div class="row small muted"><span>moins de souffrance l’été, plus d’énergie consommée</span><b id="v-clim"></b></div>
+        </div>
+        <div class="hide" id="r-dac">
+          <div class="pair dac"><button id="b-dac" class="buy"><span>Machine de captage</span><span class="c" id="c-dac"></span></button><button id="b-dacstop">Arrêter</button></div>
+          <div class="row small muted"><span id="v-dac"></span></div>
+        </div>
+        <div class="hide" id="r-geo">
+          <div class="row"><span>Voile d’aérosols</span><b id="v-geo"></b></div>
+          <input type="range" id="i-geo" min="0" max="150" step="5">
+          <div class="row small muted"><span>coût annuel</span><span id="v-geocost"></span></div>
+        </div>
+      </div>
     </div>
 
     <div class="col">
@@ -82,6 +100,9 @@
       </div>
       <div class="panel" id="p-research">
         <h2>Recherche et décisions</h2>
+        <div class="row"><span>Science</span><b id="v-sci"></b></div>
+        <button id="b-lab" class="buy"><span>Laboratoire</span><span class="c" id="c-lab"></span></button>
+        <div class="row small muted"><span id="v-labs"></span></div>
         <div id="research"></div>
         <div class="small muted" id="v-nores"></div>
       </div>
@@ -93,8 +114,8 @@
         <div id="c-unknown" class="muted">Le CO₂ ? Personne ne le mesure encore.</div>
         <div class="hide" id="c-co2">
           <div class="row"><span>CO₂ dans l’air</span><b id="v-ppm"></b></div>
-          <div class="row"><span>Émissions</span><b id="v-E"></b></div>
-          <div class="row small muted"><span>dont fossiles · autres · emballement</span><span id="v-Esplit"></span></div>
+          <div class="row"><span>Émissions mondiales</span><b id="v-E"></b></div>
+          <div class="row small muted"><span>votre bloc · reste du monde · emballement</span><span id="v-Esplit"></span></div>
         </div>
         <div class="hide" id="c-temp">
           <div class="temp" id="v-T"></div>
@@ -108,23 +129,26 @@
         </div>
         <ul id="tips" class="tips"></ul>
       </div>
-      <div class="panel hide" id="p-act">
-        <h2>Agir sur le climat</h2>
-        <div class="hide" id="r-adapt">
-          <button id="b-dig" class="buy"><span>Digues</span><span class="c" id="c-dig"></span></button>
-          <div class="row small muted"><span>protection côtière</span><b id="v-dig"></b></div>
-          <button id="b-clim" class="buy"><span>Climatisation</span><span class="c" id="c-clim"></span></button>
-          <div class="row small muted"><span>moins de souffrance l’été, plus d’énergie consommée</span><b id="v-clim"></b></div>
+      <div class="panel" id="p-world">
+        <h2>Le monde</h2>
+        <div class="small muted">Vous ne décidez que pour votre bloc. Le reste du monde copie ce qui marche, à son rythme.</div>
+        <div class="row"><span>Votre bloc dans l’économie mondiale</span><b id="v-P"></b></div>
+        <div class="row"><span>Énergie propre chez vous</span><b id="v-cY"></b></div>
+        <div class="bar"><i id="bar-cY"></i></div>
+        <div class="row"><span>Énergie propre, reste du monde</span><b id="v-cW"></b></div>
+        <div class="bar"><i id="bar-cW"></i></div>
+        <div class="row"><span>Vitesse à laquelle il vous imite</span><b id="v-k"></b></div>
+        <div class="row small muted"><span id="v-why"></span></div>
+        <div class="row"><span>Influence</span><b id="v-inf"></b></div>
+        <button id="b-share" class="buy hide"><span>Coopération scientifique</span><span class="c">50 science → 5 influence</span></button>
+        <div class="hide" id="r-aid">
+          <div class="row"><span>Financement climat</span><b id="v-aid"></b></div>
+          <input type="range" id="i-aid" min="0" max="50" step="1">
+          <div class="row small muted"><span>part de votre revenu versée aux autres pays</span></div>
         </div>
-        <div class="hide" id="r-dac">
-          <div class="pair dac"><button id="b-dac" class="buy"><span>Machine de captage</span><span class="c" id="c-dac"></span></button><button id="b-dacstop">Arrêter</button></div>
-          <div class="row small muted"><span id="v-dac"></span></div>
-        </div>
-        <div class="hide" id="r-geo">
-          <div class="row"><span>Voile d’aérosols</span><b id="v-geo"></b></div>
-          <input type="range" id="i-geo" min="0" max="150" step="5">
-          <div class="row small muted"><span>coût annuel</span><span id="v-geocost"></span></div>
-        </div>
+        <h2 class="sub2">Diplomatie</h2>
+        <div id="treaties"></div>
+        <div class="small muted" id="v-notreaty"></div>
       </div>
     </div>
   </main>

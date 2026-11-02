@@ -25,7 +25,14 @@ while (S.phase !== 'end') {
     if (mode === 'naive' && !['filters', 'nuclear', 'eff1', 'eff2', 'heatpump'].includes(p.id)) continue;
     if (mode === 'balanced' && !climateIds.includes(p.id)) continue;
     if (mode === 'green' && ['geo'].includes(p.id)) continue;
-    if (p.cost < S.treasury * (mode === 'naive' ? 0.6 : 0.9)) A.research(S, p.id);
+    const c = Sept.priceOf(p);
+    if (c.amount < S[c.pool] * (c.pool === 'treasury' ? (mode === 'naive' ? 0.6 : 0.9) : 1)) A.research(S, p.id);
+  }
+  // science et diplomatie
+  if (Sept.labCost(S) < S.treasury * (mode === 'naive' ? 0.1 : 0.2)) A.buyLab(S);
+  if (mode !== 'naive') {
+    for (const t of Sept.visibleTreaties(S)) if (t.inf <= S.influence && (mode === 'green' || t.id !== 'cbam')) A.research(S, t.id);
+    if (S.research.greenfund) A.setAid(S, mode === 'green' ? 0.04 : 0.02);
   }
   if (mode !== 'naive') {
     if (S.research.carbontax) S.cp = mode === 'green' ? (S.research.dividend ? 150 : 60) : (S.research.dividend ? 80 : 30);
