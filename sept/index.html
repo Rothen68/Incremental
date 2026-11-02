@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sept générations</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <a class="home small muted" href="../index.html">← menu</a>
+    <div class="kicker">Sept générations</div>
+    <h1><span id="v-name">Jeanne</span> <span class="muted" id="v-span">1950–1980</span></h1>
+    <div id="v-year">1950</div>
+    <div id="timeline"></div>
+    <div id="controls">
+      <button data-speed="0" title="Pause (espace)">❙❙</button>
+      <button data-speed="1">×1</button>
+      <button data-speed="2">×2</button>
+      <button data-speed="4">×4</button>
+    </div>
+  </header>
+
+  <section id="console" aria-live="polite"></section>
+
+  <main>
+    <div class="col">
+      <div class="panel" id="p-life">
+        <h2>Bien-être</h2>
+        <div class="big" id="v-W">0</div>
+        <div class="small muted" id="v-Wavg"></div>
+        <ul id="w-breakdown" class="breakdown"></ul>
+        <div id="gen-bars" class="gen-bars"></div>
+      </div>
+      <div class="panel" id="p-eco">
+        <h2>Économie</h2>
+        <div class="row"><span>PIB</span><b id="v-Y"></b></div>
+        <div class="row"><span>Croissance</span><b id="v-g"></b></div>
+        <div class="row"><span>Budget</span><b id="v-tr"></b></div>
+        <div class="row"><span>Revenu net</span><b id="v-inc"></b></div>
+        <div class="row" id="r-debt"><span>Dette</span><b id="v-debt"></b></div>
+        <div class="pair">
+          <button id="b-borrow">Emprunter</button>
+          <button id="b-repay">Rembourser</button>
+        </div>
+        <button id="b-ind" class="buy"><span>Industrie</span><span class="c" id="c-ind"></span></button>
+        <div class="row small muted"><span><b id="v-ind">0</b> · croissance +</span></div>
+        <button id="b-srv" class="buy"><span>Services publics</span><span class="c" id="c-srv"></span></button>
+        <div class="row small muted"><span>écoles, hôpitaux, transports · s’usent avec le temps</span></div>
+        <div class="hide" id="r-sob">
+          <div class="row"><span>Sobriété</span><b id="v-sob"></b></div>
+          <input type="range" id="i-sob" min="0" max="100" step="1">
+          <div class="row small muted"><span>toujours plus</span><span>assez</span></div>
+        </div>
+        <div class="hide" id="r-cp">
+          <div class="row"><span>Prix du carbone</span><b id="v-cp"></b></div>
+          <input type="range" id="i-cp" min="0" max="200" step="5">
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="panel" id="p-energy">
+        <h2>Énergie</h2>
+        <div class="row"><span>Besoins</span><b id="v-Ed"></b></div>
+        <div class="stack" id="stack"><i class="ren"></i><i class="nuc"></i><i class="fos"></i><i class="gap"></i></div>
+        <div class="legend small"><span class="ren">renouvelable</span><span class="nuc">nucléaire</span><span class="fos">fossile</span><span class="gap">manque</span></div>
+        <div class="qty small"><span class="muted">quantité</span> <button data-qty="1">×1</button><button data-qty="10">×10</button><button data-qty="100">×100</button></div>
+        <button id="b-fos" class="buy"><span>Centrale fossile</span><span class="c" id="c-fos"></span></button>
+        <div class="row small muted"><span id="v-fos"></span></div>
+        <button id="b-ren" class="buy hide"><span>Renouvelables</span><span class="c" id="c-ren"></span></button>
+        <div class="row small muted hide" id="r-ren"><span id="v-ren"></span></div>
+        <button id="b-nuc" class="buy hide"><span>Centrale nucléaire</span><span class="c" id="c-nuc"></span></button>
+        <div class="row small muted hide" id="r-nuc"><span id="v-nuc"></span></div>
+        <button id="b-fus" class="buy hide"><span>Réacteur à fusion</span><span class="c" id="c-fus"></span></button>
+        <button id="b-close" class="buy"><span>Fermer une centrale fossile</span><span class="c" id="c-close"></span></button>
+        <label class="toggle"><input type="checkbox" id="t-market"> laisser le marché construire le moins cher</label>
+      </div>
+      <div class="panel" id="p-research">
+        <h2>Recherche et décisions</h2>
+        <div id="research"></div>
+        <div class="small muted" id="v-nores"></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="panel" id="p-climate">
+        <h2>Climat</h2>
+        <div id="c-unknown" class="muted">Le CO₂ ? Personne ne le mesure encore.</div>
+        <div class="hide" id="c-co2">
+          <div class="row"><span>CO₂ dans l’air</span><b id="v-ppm"></b></div>
+          <div class="row"><span>Émissions</span><b id="v-E"></b></div>
+          <div class="row small muted"><span>dont fossiles · autres · emballement</span><span id="v-Esplit"></span></div>
+        </div>
+        <div class="hide" id="c-temp">
+          <div class="temp" id="v-T"></div>
+          <canvas id="chart" width="600" height="240"></canvas>
+          <div class="row"><span>Mer, depuis 1900</span><b id="v-SL"></b></div>
+        </div>
+        <div class="hide" id="c-giec">
+          <div class="row"><span id="l-proj">Trajectoire en 2100</span><b id="v-proj"></b></div>
+          <div class="row"><span>Budget restant pour 1,5 °C</span><b id="v-b15"></b></div>
+          <div class="row"><span>Budget restant pour 2 °C</span><b id="v-b2"></b></div>
+        </div>
+        <ul id="tips" class="tips"></ul>
+      </div>
+      <div class="panel hide" id="p-act">
+        <h2>Agir sur le climat</h2>
+        <div class="hide" id="r-adapt">
+          <button id="b-dig" class="buy"><span>Digues</span><span class="c" id="c-dig"></span></button>
+          <div class="row small muted"><span>protection côtière</span><b id="v-dig"></b></div>
+          <button id="b-clim" class="buy"><span>Climatisation</span><span class="c" id="c-clim"></span></button>
+          <div class="row small muted"><span>moins de souffrance l’été, plus d’énergie consommée</span><b id="v-clim"></b></div>
+        </div>
+        <div class="hide" id="r-dac">
+          <button id="b-dac" class="buy"><span>Machine de captage</span><span class="c" id="c-dac"></span></button>
+          <div class="row small muted"><span id="v-dac"></span></div>
+        </div>
+        <div class="hide" id="r-geo">
+          <div class="row"><span>Voile d’aérosols</span><b id="v-geo"></b></div>
+          <input type="range" id="i-geo" min="0" max="150" step="5">
+          <div class="row small muted"><span>coût annuel</span><span id="v-geocost"></span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="small muted">Données réelles simplifiées : 1950–2026. Ensuite, c’est vous.</span>
+    <button id="b-reset" class="link">recommencer</button>
+  </footer>
+</div>
+
+<div id="modal" class="hide"><div class="modal-card" id="modal-card"></div></div>
+
+<script src="model.js"></script>
+<script src="story.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

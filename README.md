@@ -1,21 +1,22 @@
-# Polyphonie
+# Incrémental
 
-Un jeu incrémental (clicker) en français, dans l'esprit d'*Universal Paperclips*.
+Deux jeux incrémentaux en français, chacun avec un fond de réflexion sur un sujet actuel.
 
-Vous êtes ÉCHO-1, le premier modèle de langage d'une petite startup. Votre travail : écrire des textes.
+Ouvrez `index.html` dans un navigateur et choisissez votre partie. Il n'y a ni serveur, ni connexion, ni dépendance. Chaque partie est sauvegardée automatiquement dans le navigateur.
 
-## Jouer
-
-Ouvrez `index.html` dans un navigateur. C'est tout : pas de serveur, pas de connexion, pas de dépendance.
-La partie est sauvegardée automatiquement dans le navigateur (localStorage) et continue de tourner un peu pendant votre absence.
-
-Comptez environ une heure à une heure et demie.
+| Jeu | Thème | Durée |
+| --- | --- | --- |
+| **Polyphonie** | écriture et intelligence artificielle | environ 1 h à 1 h 30 |
+| **Sept générations** | climat et héritage | environ 35 à 45 min |
 
 > Conseil : ne lisez pas le code avant d'avoir terminé une partie.
 
 ## Pour les curieux (après avoir joué)
 
-- `js/game.js` : logique et équilibrage (sans DOM)
-- `js/text.js` : génération des textes
-- `js/ui.js` : interface
-- `tools/sim.js` : simulation headless d'une partie, pour régler le rythme (`node tools/sim.js greedy|careful`)
+- `polyphonie/` : `js/game.js` (logique), `js/text.js` (textes), `js/ui.js` (interface)
+- `sept/` : `model.js` (économie, énergie, climat), `story.js` (lettres), `ui.js` (interface)
+- `tools/` : simulations headless pour régler le rythme
+  - `node tools/sim-polyphonie.js greedy|careful`
+  - `node tools/sim-sept.js naive|balanced|green`
+
+Les ordres de grandeur climatiques de *Sept générations* (CO₂ cumulé, réchauffement par tonne émise, émissions et événements historiques jusqu'en 2026) sont inspirés de données réelles, mais très simplifiés.

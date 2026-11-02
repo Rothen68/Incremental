@@ -1,8 +1,8 @@
 // Simulation headless d'une partie, pour régler le rythme.
-// Usage : node tools/sim.js [greedy|careful] [minutes]
+// Usage : node tools/sim-polyphonie.js [greedy|careful] [minutes]
 'use strict';
-require('../js/text.js');
-require('../js/game.js');
+require('../polyphonie/js/text.js');
+require('../polyphonie/js/game.js');
 const { Game } = globalThis;
 
 const mode = process.argv[2] || 'greedy';
