@@ -64,8 +64,9 @@
       <div class="panel" id="p-energy">
         <h2>Énergie</h2>
         <div class="row"><span>Besoins</span><b id="v-Ed"></b></div>
-        <div class="stack" id="stack"><i class="ren"></i><i class="nuc"></i><i class="fos"></i><i class="gap"></i></div>
-        <div class="legend small"><span class="ren">renouvelable</span><span class="nuc">nucléaire</span><span class="fos">fossile</span><span class="gap">manque</span></div>
+        <div class="stack" id="stack"><i class="ren"></i><i class="nuc"></i><i class="fus"></i><i class="fos"></i><i class="gap"></i></div>
+        <div class="legend small"><span class="ren">renouvelable</span><span class="nuc">nucléaire</span><span class="fus hide" id="lg-fus">fusion</span><span class="fos">fossile</span><span class="gap">manque</span></div>
+        <div class="row small muted"><span>Capacité installée</span><span id="v-cap"></span></div>
         <div class="qty small"><span class="muted">quantité</span> <button data-qty="1">×1</button><button data-qty="10">×10</button><button data-qty="100">×100</button></div>
         <button id="b-fos" class="buy"><span>Centrale fossile</span><span class="c" id="c-fos"></span></button>
         <div class="row small muted"><span id="v-fos"></span></div>

@@ -264,7 +264,10 @@
     // énergie
     set('v-Ed', fmt(d.Ed) + ' unités');
     const tot = Math.max(d.Ed, 1);
-    const parts = [d.Ruse, d.Nuse, d.fossilUsed, Math.max(0, d.Ed - d.supply)];
+    const parts = [d.Ruse, d.Nuse, d.Fuse, d.fossilUsed, Math.max(0, d.Ed - d.supply)];
+    const surplus = d.capacity - d.supply;
+    set('v-cap', fmt(d.capacity) + ' unités' + (surplus > d.Ed * 0.05 ? ` · ${fmt(surplus)} inutilisées` : ''));
+    show('lg-fus', S.Fcap > 0);
     $('stack').querySelectorAll('i').forEach((el, i) => {
       const w = Math.round(parts[i] / tot * 1000) / 10 + '%';
       if (el.dataset.w !== w) { el.dataset.w = w; el.style.width = w; }
@@ -283,13 +286,13 @@
     if (r.nuclear) {
       set('c-nuc', money(Sept.nucCost(S) * q));
       enable('b-nuc', S.treasury >= Sept.nucCost(S));
-      set('v-nuc', `${fmt(S.Ncap)} unités · ${S.nQueue.length} en chantier (10 ans)` + (S.waste > 0.5 ? ` · ${fmt(S.waste)} t de déchets à garder` : ''));
+      set('v-nuc', `${fmt(S.Ncap)} unités` + (S.Ncap > 0 ? ` · utilisées à ${pct(d.Nuse / S.Ncap, 0)}` : '') + ` · ${S.nQueue.length} en chantier (10 ans)` + (S.waste > 0.5 ? ` · ${fmt(S.waste)} t de déchets à garder` : ''));
     }
     show('b-fus', !!S.flags.fusionReady);
     if (S.flags.fusionReady) { set('c-fus', money(Sept.fusionCost() * q)); enable('b-fus', S.treasury >= Sept.fusionCost()); }
     show('r-fus', !!S.fusionAt);
     if (S.fusionAt) {
-      set('v-fus', S.flags.fusionReady ? 'fusion : 50 unités par réacteur, sans CO₂ ni déchets à vie longue'
+      set('v-fus', S.flags.fusionReady ? `${fmt(S.Fcap)} unités de fusion` + (S.Fcap > 0 ? ` · utilisées à ${pct(d.Fuse / S.Fcap, 0)}` : '') + ' · 50 par réacteur, utilisées avant le nucléaire'
         : `fusion : en recherche · premiers réacteurs promis pour ${S.flags.fusionLate ? S.fusionAt : S.fusionAt - 10}`);
     }
     set('c-close', money(Sept.closeCost() * q));

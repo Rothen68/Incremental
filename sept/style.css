@@ -9,6 +9,7 @@
   --btn-hover: #e2e6e0;
   --ren: #4f9a5b;
   --nuc: #8a6fc0;
+  --fus: #2a9d8f;
   --fos: #6b5d52;
   --gap: #d0573f;
   --hot: #c4472c;
@@ -94,6 +95,7 @@ input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--ink); }
 .stack i { display: block; height: 100%; transition: width .4s; }
 .stack .ren, .legend .ren::before { background: var(--ren); }
 .stack .nuc, .legend .nuc::before { background: var(--nuc); }
+.stack .fus, .legend .fus::before { background: var(--fus); }
 .stack .fos, .legend .fos::before { background: var(--fos); }
 .stack .gap, .legend .gap::before { background: var(--gap); }
 .legend { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); }

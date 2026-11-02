@@ -28,7 +28,7 @@
       v: 1, year: C.START, gen: 0, speed: 1, paused: false, phase: 'intro',
       Y: 100, treasury: 20, debt: 0,
       industry: 0, services: 4, servicesBought: 0,
-      fossil, Rcap: 0, cumR: 1, Ncap: 0, nQueue: [], nBuilt: 0, waste: 0,
+      fossil, Rcap: 0, cumR: 1, Ncap: 0, Fcap: 0, nQueue: [], nBuilt: 0, waste: 0,
       cum: C.CUM0, T: C.TCRE * C.CUM0, mask: 0, geoTarget: 0, SL: 0.07,
       tip: {}, tipYears: {}, dac: 0, digues: 0, clim: 0, sobriety: 0, cp: 0, market: true,
       research: {}, flags: {}, effects: [], shock: 0,
@@ -74,9 +74,11 @@
     d.Ed = S.Y * d.intensity + S.dac * 3;
     d.maxShareR = 0.4 + (r.storage1 ? 0.25 : 0) + (r.storage2 ? 0.25 : 0);
     d.Ruse = Math.min(S.Rcap, d.Ed * d.maxShareR);
-    d.Nuse = Math.min(S.Ncap, Math.max(0, d.Ed - d.Ruse));
-    d.fossilUsed = Math.min(d.F, Math.max(0, d.Ed - d.Ruse - d.Nuse));
-    d.supply = d.Ruse + d.Nuse + d.fossilUsed;
+    d.Fuse = Math.min(S.Fcap, Math.max(0, d.Ed - d.Ruse));
+    d.Nuse = Math.min(S.Ncap, Math.max(0, d.Ed - d.Ruse - d.Fuse));
+    d.fossilUsed = Math.min(d.F, Math.max(0, d.Ed - d.Ruse - d.Fuse - d.Nuse));
+    d.supply = d.Ruse + d.Fuse + d.Nuse + d.fossilUsed;
+    d.capacity = S.Rcap + S.Fcap + S.Ncap + d.F;
     d.ratio = d.Ed > 0 ? Math.min(1, d.supply / d.Ed) : 1;
     d.fossilEm = d.fossilUsed * C.FOSSIL_EF;
     d.otherEm = C.OTHER_EM * (r.forests ? 0.4 : 1);
@@ -156,7 +158,7 @@
     },
     buildFusion(S) {
       if (!S.flags.fusionReady) return 0;
-      return repeat(S, () => { if (!spend(S, fusionCost())) return false; S.Ncap += 5 * C.PLANT; return true; });
+      return repeat(S, () => { if (!spend(S, fusionCost())) return false; S.Fcap += 5 * C.PLANT; return true; });
     },
     closeFossil(S) {
       return repeat(S, () => {
@@ -348,6 +350,7 @@
     S.digues *= Math.exp(-0.01 * dt);
     S.Rcap *= Math.exp(-dt / 25);
     S.Ncap *= Math.exp(-dt / 60);
+    S.Fcap *= Math.exp(-dt / 60);
     S.waste += d.Nuse * 0.3 * dt;
     if (S.shock > 0) S.shock -= dt;
     for (let i = S.nQueue.length - 1; i >= 0; i--) {
@@ -367,7 +370,7 @@
 
   function market(S, d) {
     const capR = Math.min(S.Rcap, d.Ed * d.maxShareR);
-    let cap = capR + S.Ncap + d.F;
+    let cap = capR + S.Fcap + S.Ncap + d.F;
     const need = d.Ed * 1.03;
     let guard = 0;
     while (cap < need && guard++ < 500) {
