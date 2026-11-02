@@ -129,3 +129,4 @@ footer { display: flex; justify-content: space-between; margin: 24px 0 8px; gap:
 .modal-card button { text-align: center; }
 .modal-card canvas { width: 100%; height: auto; margin: 8px 0; }
 .modal-card .stats { font-size: 13px; margin: 10px 0; }
+.pair.dac { grid-template-columns: 1fr auto; }

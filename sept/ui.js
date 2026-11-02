@@ -34,6 +34,7 @@
   bind('b-dig', () => A.buyDigue(S));
   bind('b-clim', () => A.buyClim(S));
   bind('b-dac', () => A.buyDac(S));
+  bind('b-dacstop', () => A.stopDac(S));
   $('t-market').addEventListener('change', () => { A.toggleMarket(S); after(); });
   $('i-sob').addEventListener('input', (e) => { A.setSobriety(S, e.target.value / 100); after(); });
   $('i-cp').addEventListener('input', (e) => { A.setCp(S, +e.target.value); after(); });
@@ -292,7 +293,7 @@
     if (S.flags.fusionReady) { set('c-fus', money(Sept.fusionCost() * q)); enable('b-fus', S.treasury >= Sept.fusionCost()); }
     show('r-fus', !!S.fusionAt);
     if (S.fusionAt) {
-      set('v-fus', S.flags.fusionReady ? `${fmt(S.Fcap)} unités de fusion` + (S.Fcap > 0 ? ` · utilisées à ${pct(d.Fuse / S.Fcap, 0)}` : '') + ' · 50 par réacteur, utilisées avant le nucléaire'
+      set('v-fus', S.flags.fusionReady ? `${fmt(S.Fcap)} unités de fusion` + (S.Fcap > 0 ? ` · utilisées à ${pct(d.Fuse / S.Fcap, 0)}` : '') + ' · 50 par réacteur · peu de déchets, de courte durée · utilisée avant le nucléaire'
         : `fusion : en recherche · premiers réacteurs promis pour ${S.flags.fusionLate ? S.fusionAt : S.fusionAt - 10}`);
     }
     set('c-close', money(Sept.closeCost() * q));
@@ -338,8 +339,8 @@
     }
     show('r-dac', !!r.dac);
     if (r.dac) {
-      set('c-dac', money(Sept.dacCost(S) * q)); enable('b-dac', S.treasury >= Sept.dacCost(S));
-      set('v-dac', `${S.dac} machines · ${nf(d.removal, 1)} Gt/an retirées · entretien ${money(d.dacUpkeep)}/an`);
+      set('c-dac', money(Sept.dacCost(S) * q)); enable('b-dac', S.treasury >= Sept.dacCost(S)); enable('b-dacstop', S.dac > 0);
+      set('v-dac', `${S.dac} machines · ${nf(d.removal, 1)} Gt/an retirées · ${fmt(S.dac * 15)} unités d’énergie · entretien ${money(d.dacUpkeep)}/an`);
     }
     show('r-geo', !!r.geo);
     if (r.geo) {

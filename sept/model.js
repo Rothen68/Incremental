@@ -54,7 +54,7 @@
   function fusionCost() { return 40; }
   const industryCost = (S) => 15 * Math.pow(1.3, S.industry);
   const serviceCost = (S) => 10 * Math.pow(1.12, S.servicesBought);
-  const dacCost = (S) => 60 * Math.pow(1.04, S.dac);
+  const dacCost = (S) => 80 * Math.pow(1.06, S.dac);
   const digueCost = (S) => 30 * (1 + S.digues * 8) * Math.max(1, S.Y / 2000);
   const climCost = (S) => 20 * Math.pow(1.25, S.clim);
   const closeCost = () => 5;
@@ -71,7 +71,7 @@
     d.effMult = (r.eff1 ? 0.85 : 1) * (r.eff2 ? 0.85 : 1) * (r.eff3 ? 0.85 : 1) * (r.heatpump ? 0.85 : 1);
     d.intensity = Math.pow(0.995, Math.min(S.year, 2000) - C.START) * Math.pow(0.988, Math.max(0, S.year - 2000)) * d.effMult * (1 - 0.35 * S.sobriety)
       * (1 - 0.15 * S.cp / 200) * (1 + 0.03 * S.clim);
-    d.Ed = S.Y * d.intensity + S.dac * 3;
+    d.Ed = S.Y * d.intensity + S.dac * 15; // le captage consomme beaucoup d'énergie
     d.maxShareR = 0.4 + (r.storage1 ? 0.25 : 0) + (r.storage2 ? 0.25 : 0);
     d.Ruse = Math.min(S.Rcap, d.Ed * d.maxShareR);
     d.Fuse = Math.min(S.Fcap, Math.max(0, d.Ed - d.Ruse));
@@ -84,7 +84,7 @@
     d.otherEm = C.OTHER_EM * (r.forests ? 0.4 : 1);
     d.tipEm = (S.tip.permafrost ? 1.5 + Math.min(1.5, (S.year - S.tipYears.permafrost) * 0.02) : 0) + (S.tip.amazon ? 2 : 0);
     d.E = d.fossilEm + d.otherEm + d.tipEm;
-    d.removal = S.dac * 0.5 * (r.dac2 ? 3 : 1);
+    d.removal = S.dac * 0.5 * (r.dac2 ? 2 : 1);
     d.net = d.E - d.removal;
     d.ppm = C.PPM0 + C.PPM_K * S.cum;
     d.nonCO2 = C.NONCO2 * clamp((S.year - C.START) / 50, 0, 1); // les aérosols de pollution masquaient l'effet au début
@@ -96,7 +96,7 @@
 
     d.taxRev = S.cp * d.fossilEm * 0.05 * (r.dividend ? 0.3 : 1);
     d.geoUpkeep = 0.01 * S.Y * S.mask;
-    d.dacUpkeep = S.dac * 2;
+    d.dacUpkeep = S.dac * 20;
     d.interest = S.debt * 0.03;
     d.income = S.Y * 0.15 + d.taxRev;
     d.netIncome = d.income - d.geoUpkeep - d.dacUpkeep - d.interest;
@@ -178,6 +178,7 @@
       S.digues = Math.min(0.9, S.digues + 0.1); return 1;
     },
     buyClim(S) { if (!S.research.adapt || S.clim >= 5) return 0; if (!spend(S, climCost(S))) return 0; S.clim++; return 1; },
+    stopDac(S) { return repeat(S, () => { if (S.dac < 1) return false; S.dac--; return true; }); },
     borrow(S) { const a = borrowAmount(S); S.treasury += a; S.debt += a; S.flags.borrowed = true; return 1; },
     repay(S) { const a = Math.min(S.debt, borrowAmount(S), S.treasury); if (a <= 0) return 0; S.treasury -= a; S.debt -= a; return 1; },
     setSobriety(S, v) { if (S.research.meadows) S.sobriety = clamp(+v, 0, 1); },
@@ -230,16 +231,16 @@
     { id: 'heatpump', y: 2010, cost: 300, name: 'Pompes à chaleur', desc: 'Besoins en énergie −15 %.' },
     { id: 'forests', y: 2015, cost: 400, name: 'Forêts et agroécologie', desc: 'Arrêter la déforestation, changer les sols. Émissions hors énergie −60 %.' },
     { id: 'storage2', y: 2020, cost: 600, req: 'storage1', name: 'Stockage saisonnier', desc: 'Garder l’été pour l’hiver. Part maximale des renouvelables : 90 %.' },
-    { id: 'dac', y: 2022, cost: 500, name: 'Captage direct du CO₂', desc: 'Des machines qui aspirent le CO₂ de l’air. Chères, gourmandes en énergie. Mais elles font reculer le compteur.' },
+    { id: 'dac', y: 2022, cost: 500, name: 'Captage direct du CO₂', desc: 'Des machines qui aspirent le CO₂ de l’air. Chères à faire tourner, et très gourmandes en énergie : alimentées au fossile, elles émettent plus qu’elles ne captent. Mais elles font reculer le compteur.' },
     { id: 'eff3', y: 2030, cost: 800, req: 'eff2', name: 'Sobriété technique', desc: 'Des objets qui durent. Besoins en énergie −15 %.' },
     { id: 'geo', y: 2040, cost: 400, name: 'Aérosols stratosphériques', desc: 'Voiler le soleil pour refroidir la Terre. Peu cher, rapide. Il faudra continuer chaque année, et toutes les générations après vous aussi.',
       effect: (S) => log(S, 'Les avions sont prêts. Il suffit de régler la jauge.', 'sys') },
-    { id: 'fusion', y: 2045, cost: 3000, name: 'Fusion nucléaire', desc: 'Une énergie propre et presque illimitée. Disponible dans trente ans. (Elle l’est depuis 1950.)',
+    { id: 'fusion', y: 2045, cost: 3000, name: 'Fusion nucléaire', desc: 'Une énergie propre, presque illimitée, sans déchets à vie longue. Disponible dans trente ans. (Elle l’est depuis 1950.)',
       effect: (S) => {
         S.fusionAt = Math.floor(S.year) + 40;
         log(S, `Le programme de fusion est lancé. Premiers réacteurs promis pour ${S.fusionAt - 10}.`, 'sci');
       } },
-    { id: 'dac2', y: 2060, cost: 1500, req: 'dac', name: 'Captage à grande échelle', desc: 'Chaque machine de captage retire trois fois plus de CO₂.' },
+    { id: 'dac2', y: 2060, cost: 1500, req: 'dac', name: 'Captage à grande échelle', desc: 'Chaque machine de captage retire deux fois plus de CO₂, pour la même énergie.' },
   ];
   const RES_BY_ID = {};
   RESEARCH.forEach((p) => { RES_BY_ID[p.id] = p; });
@@ -433,7 +434,15 @@
   // ---------- sauvegarde ----------
   function save(S) { S.lastSave = Date.now(); try { localStorage.setItem(C.SAVE_KEY, JSON.stringify(S)); } catch (e) { /* indisponible */ } }
   function load() {
-    try { const raw = localStorage.getItem(C.SAVE_KEY); return raw ? Object.assign(newState(), JSON.parse(raw)) : null; } catch (e) { return null; }
+    try {
+      const raw = localStorage.getItem(C.SAVE_KEY);
+      if (!raw) return null;
+      const S = Object.assign(newState(), JSON.parse(raw));
+      // anciennes sauvegardes : les réacteurs à fusion étaient comptés comme du nucléaire
+      const nucMax = S.nBuilt * 2 * C.PLANT;
+      if (S.flags.fusionReady && !S.Fcap && S.Ncap > nucMax) { S.Fcap = S.Ncap - nucMax; S.Ncap = nucMax; }
+      return S;
+    } catch (e) { return null; }
   }
   function wipe() { try { localStorage.removeItem(C.SAVE_KEY); } catch (e) { /* rien */ } }
 
