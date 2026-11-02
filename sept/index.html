@@ -51,12 +51,22 @@
         <div class="hide" id="r-sob">
           <div class="row"><span>Sobriété</span><b id="v-sob"></b></div>
           <input type="range" id="i-sob" min="0" max="100" step="1">
+          <div class="row small warn" id="v-sobwarn"></div>
           <div class="row small muted"><span>toujours plus</span><span>assez</span></div>
         </div>
         <div class="hide" id="r-cp">
           <div class="row"><span>Prix du carbone</span><b id="v-cp"></b></div>
           <input type="range" id="i-cp" min="0" max="200" step="5">
+          <div class="row small warn" id="v-cpwarn"></div>
         </div>
+      </div>
+      <div class="panel" id="p-opinion">
+        <h2>Opinion publique</h2>
+        <div class="row"><span>Soutien à l’action climatique</span><b id="v-sup"></b></div>
+        <div class="bar"><i id="bar-sup"></i></div>
+        <div class="row small muted"><span id="v-supwhy"></span></div>
+        <div class="row"><span>Prochaine élection</span><b id="v-elec2"></b></div>
+        <div class="row small muted"><span id="v-accept"></span></div>
       </div>
       <div class="panel hide" id="p-act">
         <h2>Agir sur le climat</h2>

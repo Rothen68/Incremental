@@ -102,6 +102,8 @@ input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--ink); }
 .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 4px; }
 
 #chart { width: 100%; height: auto; display: block; margin: 6px 0; }
+.warn { color: var(--hot); min-height: 0; }
+.warn:empty { display: none; }
 .bar { height: 5px; background: var(--btn); margin: 2px 0 6px; overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--ren); transition: width .4s; }
 h2.sub2 { margin-top: 16px; }

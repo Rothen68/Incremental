@@ -82,7 +82,7 @@
     renderList('research', Sept.visibleResearch(S), Sept.RESEARCH);
     set('v-nores', Sept.visibleResearch(S).length ? '' : 'Rien de nouveau pour l’instant. Le monde avance.');
   }
-  function renderList(boxId, vis, all) {
+  function renderList(boxId, vis, all, blocked) {
     const sig = vis.map((p) => p.id).join('|');
     const box = $(boxId);
     if (sig !== listSig[boxId]) {
@@ -105,7 +105,7 @@
     for (const el of box.children) {
       const p = all.find((q) => q.id === el.dataset.id);
       const c = Sept.priceOf(p);
-      el.classList.toggle('off', S[c.pool] < c.amount);
+      el.classList.toggle('off', S[c.pool] < c.amount || !!blocked);
     }
   }
 
@@ -266,13 +266,29 @@
     show('r-sob', !!r.meadows);
     if (r.meadows) {
       set('v-sob', pct(S.sobriety, 0));
-      if (document.activeElement !== $('i-sob')) $('i-sob').value = Math.round(S.sobriety * 100);
+      if (document.activeElement !== $('i-sob') || Sept.locked(S)) $('i-sob').value = Math.round(S.sobriety * 100);
+      set('v-sobwarn', Sept.locked(S) ? `Le gouvernement s’est engagé : pas plus de ${pct(S.lock.sob, 0)} jusqu’en ${S.lock.until}.`
+        : S.sobriety > d.sobCap + 1e-9 ? `Au-delà de ce que la majorité accepte (${pct(d.sobCap, 0)}) : risque de recul en ${d.nextElection}.` : '');
     }
     show('r-cp', !!r.carbontax);
     if (r.carbontax) {
       set('v-cp', nf(S.cp) + ' €/t');
-      if (document.activeElement !== $('i-cp')) $('i-cp').value = S.cp;
+      if (document.activeElement !== $('i-cp') || Sept.locked(S)) $('i-cp').value = S.cp;
+      set('v-cpwarn', Sept.locked(S) ? `Le gouvernement s’est engagé : pas plus de ${S.lock.cp} €/t jusqu’en ${S.lock.until}.`
+        : S.cp > d.cpCap ? `Au-delà de ce que la majorité accepte (${d.cpCap} €/t) : risque de recul en ${d.nextElection}.` : '');
     }
+
+    // opinion
+    set('v-sup', pct(S.support, 0));
+    { const w = Math.round(S.support * 1000) / 10 + '%'; if (cache.barSup !== w) { cache.barSup = w; $('bar-sup').style.width = w; } }
+    const sw = [];
+    if (d.knowledge > 0) sw.push(`savoir +${nf(d.knowledge * 100)}`);
+    if (d.alarmBoost >= 0.01) sw.push(`catastrophes récentes +${nf(d.alarmBoost * 100)}`);
+    if (d.doubt >= 0.01) sw.push(`doute semé par le fossile −${nf(d.doubt * 100)}`);
+    if (d.pain >= 0.01) sw.push(`efforts demandés −${nf(d.pain * 100)}`);
+    set('v-supwhy', sw.length ? sw.join(' · ') : 'personne ne parle encore de climat');
+    set('v-elec2', String(d.nextElection));
+    set('v-accept', `la majorité accepte : prix du carbone ≤ ${d.cpCap} €/t · sobriété ≤ ${pct(d.sobCap, 0)}`);
 
     // énergie
     set('v-Ed', fmt(d.Ed) + ' unités');
@@ -362,8 +378,9 @@
       set('v-aid', pct(S.aid, 1) + ' · ' + money(d.aidMoney) + '/an');
       if (document.activeElement !== $('i-aid')) $('i-aid').value = Math.round(S.aid * 1000);
     }
-    renderList('treaties', Sept.visibleTreaties(S), Sept.TREATIES);
-    set('v-notreaty', Sept.visibleTreaties(S).length ? '' : (S.year < 1972 ? 'Aucune conférence mondiale sur l’environnement avant 1972.' : 'Aucune négociation en cours.'));
+    const noMajority = S.support < Sept.RATIFY;
+    renderList('treaties', Sept.visibleTreaties(S), Sept.TREATIES, noMajority);
+    set('v-notreaty', Sept.visibleTreaties(S).length ? (noMajority ? `Pas de majorité pour ratifier un traité : il faut ${pct(Sept.RATIFY, 0)} de soutien.` : '') : (S.year < 1972 ? 'Aucune conférence mondiale sur l’environnement avant 1972.' : 'Aucune négociation en cours.'));
 
     // science
     set('v-sci', nf(S.science, 0) + ` (+${nf(d.sciRate, 1)}/an)`);
@@ -446,6 +463,7 @@
         + `<div class="row"><span>Montée des eaux depuis 1950</span><b>+${Math.round((S.SL - 0.07) * 100)} cm</b></div>`
         + `<div class="row"><span>CO₂ net émis depuis 1950</span><b>${fmt(S.cum - Sept.C.CUM0)} Gt</b></div>`
         + `<div class="row"><span>Points de bascule franchis</span><b>${Object.keys(S.tip).length} / 5</b></div>`
+        + `<div class="row"><span>Reculs après des élections</span><b>${S.rollbacks}</b></div>`
         + `<div class="row"><span>Énergie propre : vous · reste du monde</span><b>${pct(Sept.derive(S).cY, 0)} · ${pct(S.cW, 0)}</b></div>`
         + '<div class="row muted"><span>Notre monde réel, politiques actuelles, en 2100</span><b>≈ +2,7 à +3,1 °C</b></div>'
         + Sept.GENS.map((g, i) => `<div class="row"><span>Bien-être moyen · ${g.name}</span><b>${nf(Sept.genAvg(S, i), 1)}</b></div>`).join('')

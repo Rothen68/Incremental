@@ -81,6 +81,9 @@
     }
     if (end.cY > 0.5 && end.cW < end.cY - 0.3) P.push('Nous avons fait notre part. Le reste du monde, lui, se développe comme nous l’avons fait : au charbon. De quel droit le lui reprocher ?');
     else if (end.cW > 0.5 && start.cW <= 0.5) P.push('Le reste du monde a suivi. Plus lentement qu’on l’espérait, mais il a suivi.');
+    const rb = (end.rollbacks || 0) - (start.rollbacks || 0);
+    if (rb >= 2) P.push('On a voté contre nos propres promesses. Plusieurs fois. Je comprends pourquoi, et c’est peut-être ça le pire.');
+    else if ((end.support || 0) > 0.6 && (start.support || 0) < 0.5) P.push('Pour la première fois de ma vie, une majorité voulait vraiment changer. Ne la gâche pas.');
     if (end.SL - start.SL > 0.1) P.push(`La mer est montée de ${cm(end.SL - start.SL)} depuis ma naissance.`);
 
     const w = Sept.genAvg(S, g), wPrev = g > 0 ? Sept.genAvg(S, g - 1) : null;

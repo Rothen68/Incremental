@@ -35,6 +35,7 @@
       log: [], hist: [], genW: [], genStart: [],
       qty: 1, lastYear: C.START, fusionAt: 0, renYear: 0, fusYear: 0,
       science: 5, labs: 0, influence: 0, aid: 0,
+      support: 0.35, alarm: 0, closePain: 0, rollbacks: 0, // opinion publique
       cW: 0, wEff: 1, wO: 1, // le reste du monde : part d'énergie propre, efficacité, émissions des sols
       lastSave: Date.now(),
     };
@@ -64,7 +65,8 @@
   function borrowAmount(S) { return Math.round(S.Y * 0.3); }
 
   // Les filières industrielles limitent ce qu'on peut installer chaque année.
-  function renRoom(S) { return Math.max(0, 30 + 0.3 * S.Rcap - S.renYear); }
+  // ... et l'acceptation locale (permis, recours) aussi.
+  function renRoom(S) { return Math.max(0, (30 + 0.3 * S.Rcap) * (0.5 + S.support) - S.renYear); }
   function fusRoom(S) { return Math.max(0, 50 + 0.2 * S.Fcap - S.fusYear); }
 
   function fossilPlants(S) { return S.fossil.reduce((a, c) => a + c.n, 0); }
@@ -121,6 +123,16 @@
     d.dacUpkeep = S.dac * 20;
     d.interest = S.debt * 0.03;
     d.income = S.Y * 0.15 + d.taxRev;
+    // opinion publique : ce que la majorité est prête à accepter
+    d.knowledge = (r.models ? 0.1 : 0) + (r.giec ? 0.1 : 0) + (r.education ? 0.1 : 0) + (r.assembly ? 0.08 : 0);
+    d.alarmBoost = Math.min(0.25, S.alarm);
+    d.doubt = (S.year >= 1989 ? 0.25 : 0.08) * (d.Ed > 0 ? d.fossilUsed / d.Ed : 0) * (r.lobbyreg ? 0.4 : 1);
+    d.pain = 0.3 * S.cp / 200 * (r.dividend ? 0.3 : 1) + 0.3 * S.sobriety * (r.assembly ? 0.6 : 1) + S.closePain;
+    d.supportTarget = clamp(0.3 + d.knowledge + d.alarmBoost - d.doubt - d.pain, 0.05, 0.95);
+    d.cpCap = Math.round(250 * S.support / 5) * 5;
+    d.sobCap = Math.round(S.support * 80) / 100;
+    d.nextElection = Math.floor(S.year / 5) * 5 + 5;
+
     d.aidMoney = S.aid * d.income;
     d.netIncome = d.income - d.geoUpkeep - d.dacUpkeep - d.interest - d.aidMoney;
     d.sciRate = 1 + 1.5 * S.labs;
@@ -195,6 +207,7 @@
         const c = S.fossil.find((x) => x.n > 0); // les plus vieilles d'abord
         c.n--; S.fossil = S.fossil.filter((x) => x.n > 0);
         S.flags.closed = (S.flags.closed || 0) + 1;
+        S.closePain = Math.min(0.3, S.closePain + 0.01 * (S.research.justtransition ? 0.3 : 1));
         return true;
       });
     },
@@ -210,8 +223,9 @@
     stopDac(S) { return repeat(S, () => { if (S.dac < 1) return false; S.dac--; return true; }); },
     borrow(S) { const a = borrowAmount(S); S.treasury += a; S.debt += a; S.flags.borrowed = true; return 1; },
     repay(S) { const a = Math.min(S.debt, borrowAmount(S), S.treasury); if (a <= 0) return 0; S.treasury -= a; S.debt -= a; return 1; },
-    setSobriety(S, v) { if (S.research.meadows) S.sobriety = clamp(+v, 0, 1); },
-    setCp(S, v) { if (S.research.carbontax) S.cp = clamp(+v, 0, 200); },
+    // après un recul électoral, le nouveau gouvernement tient sa promesse jusqu'au scrutin suivant
+    setSobriety(S, v) { if (S.research.meadows) S.sobriety = clamp(+v, 0, locked(S) ? S.lock.sob : 1); },
+    setCp(S, v) { if (S.research.carbontax) S.cp = clamp(+v, 0, locked(S) ? S.lock.cp : 200); },
     setGeo(S, v) { if (S.research.geo) { S.geoTarget = clamp(+v, 0, 1.5); if (S.geoTarget > 0) S.flags.geoUsed = true; } },
     setQty(S, q) { S.qty = q; },
     toggleMarket(S) { S.market = !S.market; },
@@ -222,6 +236,7 @@
     research(S, id) {
       const p = RES_BY_ID[id] || TREATY_BY_ID[id];
       if (!p || !(RES_BY_ID[id] ? researchVisible(S, p) : treatyVisible(S, p))) return false;
+      if (TREATY_BY_ID[id] && S.support < RATIFY) return false;
       const c = priceOf(p);
       if (S[c.pool] < c.amount - 1e-9) return false;
       S[c.pool] -= c.amount;
@@ -238,6 +253,8 @@
       log(S, `Génération ${S.gen + 1} : ${GENS[S.gen].name} prend le relais.`, 'sys');
     },
   };
+
+  function locked(S) { return !!(S.lock && S.year < S.lock.until); }
 
   function addRen(S) { S.Rcap += C.PLANT; S.cumR += C.PLANT; S.renYear += C.PLANT; }
 
@@ -263,6 +280,10 @@
       effect: (S) => log(S, 'Premier rapport du GIEC : « Les émissions humaines augmentent substantiellement les concentrations de gaz à effet de serre. »', 'sci') },
     { id: 'carbontax', y: 1991, cost: 50, name: 'Prix du carbone', desc: 'Faire payer chaque tonne émise. Rapporte de l’argent, rend le fossile moins attractif, réduit un peu la demande. Et met des gens en colère.' },
     { id: 'eff2', y: 1995, sci: 40, req: 'eff1', name: 'Rénovation des bâtiments', desc: 'Besoins en énergie −15 %.' },
+    { id: 'education', y: 1990, sci: 30, req: 'models', name: 'Éducation au climat', desc: 'Enseigner le climat à l’école, former les journalistes. Soutien à l’action climatique +10 %.' },
+    { id: 'justtransition', y: 1995, cost: 150, name: 'Transition juste', desc: 'Former et reclasser les travailleurs du fossile. Fermer une centrale coûte trois fois moins de soutien.' },
+    { id: 'lobbyreg', y: 2000, cost: 200, name: 'Encadrer le lobbying', desc: 'Registres publics, publicité fossile interdite. Les campagnes de doute pèsent 60 % de moins.' },
+    { id: 'assembly', y: 2019, cost: 100, name: 'Convention citoyenne', desc: 'Tirer au sort des citoyens, leur donner du temps et des experts. Soutien +8 %, et la sobriété est mieux acceptée.' },
     { id: 'adapt', y: 2000, cost: 120, name: 'Plan d’adaptation', desc: 'Accepter que le climat a déjà changé. Débloque digues et climatisation.' },
     { id: 'storage1', y: 2005, sci: 50, req: 'pv', name: 'Batteries', desc: 'Stocker le soleil de midi pour le soir. Part maximale des renouvelables : 40 % → 65 %.' },
     { id: 'dividend', y: 2008, cost: 150, req: 'carbontax', name: 'Dividende carbone', desc: 'Rendre l’argent de la taxe aux ménages. La colère retombe, le budget aussi.' },
@@ -302,6 +323,7 @@
     { id: 'forestpact', y: 2030, inf: 50, req: 'greenfund', name: 'Pacte mondial des forêts', desc: 'Payer pour que les forêts restent debout. Émissions des sols du reste du monde −60 %.' },
     { id: 'globalprice', y: 2045, inf: 100, k: 0.04, req: 'paris', name: 'Prix mondial du carbone', desc: 'Le même prix partout. Le reste du monde vous rattrape vite.' },
   ];
+  const RATIFY = 0.4; // soutien minimal pour ratifier un traité
   const TREATY_BY_ID = {};
   TREATIES.forEach((p) => { TREATY_BY_ID[p.id] = p; });
   function treatyVisible(S, p) { return !S.research[p.id] && S.year >= p.y && (!p.req || S.research[p.req]); }
@@ -321,6 +343,8 @@
     { y: 1965, msg: 'Un rapport remis au président des États-Unis avertit que le CO₂ pourrait modifier le climat d’ici l’an 2000.' },
     { y: 1969, msg: 'Des humains marchent sur la Lune. Ils photographient la Terre : elle a l’air petite.' },
     { y: 1973, msg: 'Premier choc pétrolier. Le prix du fossile double pendant cinq ans.', fn: (S) => { S.shock = 5; } },
+    { y: 1977, msg: 'Les chercheurs d’une grande compagnie pétrolière confirment en interne que le CO₂ réchauffe la planète. Le rapport reste dans un tiroir.' },
+    { y: 1989, msg: 'Des industriels du fossile fondent une coalition pour semer le doute sur la science du climat. Le doute pèse désormais sur l’opinion.' },
     { y: 1979, msg: 'Rapport Charney : doubler le CO₂ réchaufferait la Terre d’environ 3 °C. « Attendre pour voir » pourrait être trop tard.' },
     { y: 1988, msg: 'Un climatologue déclare devant le Sénat américain que le réchauffement a commencé.' },
     { y: 1992, msg: 'Sommet de la Terre à Rio. Les pays promettent de « prévenir toute perturbation dangereuse » du climat.' },
@@ -340,6 +364,7 @@
     const T = S.T, y = Math.floor(S.year);
     const ev = (msg, w, years, extra) => {
       S.effects.push({ w, until: S.year + years });
+      S.alarm += 0.03;
       log(S, msg, 'event');
       if (extra) extra();
     };
@@ -367,7 +392,7 @@
       if (S.tip[id]) return;
       S.tipYears[id + '_c'] = cond ? (S.tipYears[id + '_c'] || 0) + 1 : 0;
       if (S.tipYears[id + '_c'] >= 5) {
-        S.tip[id] = true; S.tipYears[id] = Math.floor(S.year);
+        S.tip[id] = true; S.tipYears[id] = Math.floor(S.year); S.alarm += 0.1;
         log(S, msg, 'tip'); if (fn) fn();
       }
     };
@@ -424,6 +449,9 @@
       if (S.year >= S.nQueue[i].at) { S.Ncap += S.nQueue[i].cap; S.nQueue.splice(i, 1); }
     }
     S.effects = S.effects.filter((e) => e.until > S.year);
+    S.support += (d.supportTarget - S.support) * Math.min(1, 0.3 * dt);
+    S.alarm *= Math.exp(-dt / 6);
+    S.closePain *= Math.exp(-dt / 5);
     S.science += d.sciRate * dt;
     S.influence = Math.max(0, S.influence + d.inflRate * dt);
     if (d.cWtarget > S.cW) S.cW += (d.cWtarget - S.cW) * Math.min(1, d.k * dt);
@@ -479,6 +507,7 @@
       S.flags.fusionReady = true;
       log(S, 'La fusion fonctionne. Enfin. Elle arrive après la bataille, mais elle arrive.', 'sci');
     }
+    if (y % 5 === 0 && y > C.START) election(S, d);
     tipping(S);
     if (S.phase === 'play') weather(S, d);
     if (S.debt > 3 * S.Y && !S.flags.debtCrisis) {
@@ -488,9 +517,29 @@
     S.hist.push({ y, T: S.T, E: d.E, W: d.W, Y: S.Y, ppm: d.ppm, net: d.net });
   }
 
+  // Tous les cinq ans, la majorité ramène les politiques à ce qu'elle accepte.
+  function election(S, d) {
+    const pctS = Math.round(S.support * 100);
+    const cuts = [];
+    if (S.cp > d.cpCap) { S.cp = d.cpCap; cuts.push(`ramène le prix du carbone à ${d.cpCap} €/t`); }
+    if (S.sobriety > d.sobCap + 1e-9) { S.sobriety = d.sobCap; cuts.push(`réduit la sobriété à ${Math.round(d.sobCap * 100)} %`); }
+    S.lock = null;
+    if (cuts.length) {
+      S.rollbacks++;
+      S.lock = { until: S.lastYear + 5, cp: S.cp, sob: S.sobriety };
+      log(S, `Élections : le soutien à l’action climatique n’est que de ${pctS} %. Le nouveau gouvernement ${cuts.join(' et ')}.`, 'event');
+      if (!S.flags.rollbackTip) { S.flags.rollbackTip = true; log(S, 'Ce que la majorité accepte est indiqué dans « Opinion publique ». Vous pouvez aller au-delà, jusqu’aux prochaines élections.', 'sys'); }
+    } else if (S.support >= 0.6 && S.year >= 1990) {
+      S.influence += 3;
+      log(S, `Élections : une large majorité (${pctS} %) soutient l’action climatique. Le monde le remarque : influence +3.`, 'sci');
+    } else if (S.year >= 1970) {
+      log(S, `Élections : soutien à l’action climatique ${pctS} %.`, 'sys');
+    }
+  }
+
   function snapshot(S) {
     const d = derive(S);
-    return { year: Math.floor(S.year), T: S.T, cum: S.cum, SL: S.SL, Y: S.Y, debt: S.debt, ren: renCost(S), plants: d.plants, waste: S.waste, mask: S.mask, tips: Object.keys(S.tip).length, E: d.E, cY: d.cY, cW: S.cW };
+    return { year: Math.floor(S.year), T: S.T, cum: S.cum, SL: S.SL, Y: S.Y, debt: S.debt, ren: renCost(S), plants: d.plants, waste: S.waste, mask: S.mask, tips: Object.keys(S.tip).length, E: d.E, cY: d.cY, cW: S.cW, rollbacks: S.rollbacks, support: S.support };
   }
 
   function endGeneration(S) {
@@ -519,7 +568,7 @@
   function wipe() { try { localStorage.removeItem(C.SAVE_KEY); } catch (e) { /* rien */ } }
 
   root.Sept = {
-    C, GENS, END, newState, derive, tick, advance, A, RESEARCH, visibleResearch, TREATIES, visibleTreaties, priceOf, labCost,
+    RATIFY: 0.4, locked, C, GENS, END, newState, derive, tick, advance, A, RESEARCH, visibleResearch, TREATIES, visibleTreaties, priceOf, labCost,
     renRoom, fusRoom, fossilCost, renCost, nucCost, fusionCost, industryCost, serviceCost, dacCost, digueCost, climCost, closeCost, borrowAmount,
     fossilPlants, genAvg, fmtT, save, load, wipe, log,
   };

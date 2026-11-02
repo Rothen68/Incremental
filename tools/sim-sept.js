@@ -14,7 +14,7 @@ A.start(S);
 S.market = true;
 const out = [];
 let lastLog = 0;
-const climateIds = ['keeling', 'models', 'giec', 'pv', 'wind', 'storage1', 'storage2', 'eff1', 'eff2', 'eff3', 'heatpump', 'forests', 'filters', 'carbontax', 'dividend', 'adapt', 'dac', 'meadows', 'dac2', 'ev', 'greensteel', 'h2', 'synfuel'];
+const climateIds = ['keeling', 'models', 'giec', 'pv', 'wind', 'storage1', 'storage2', 'eff1', 'eff2', 'eff3', 'heatpump', 'forests', 'filters', 'carbontax', 'dividend', 'adapt', 'dac', 'meadows', 'dac2', 'ev', 'greensteel', 'h2', 'synfuel', 'education', 'justtransition', 'lobbyreg', 'assembly'];
 
 while (S.phase !== 'end') {
   if (S.phase === 'transition') { A.nextGen(S); continue; }
@@ -35,8 +35,8 @@ while (S.phase !== 'end') {
     if (S.research.greenfund) A.setAid(S, mode === 'green' ? 0.04 : 0.02);
   }
   if (mode !== 'naive') {
-    if (S.research.carbontax) S.cp = mode === 'green' ? (S.research.dividend ? 150 : 60) : (S.research.dividend ? 80 : 30);
-    if (S.research.meadows && mode === 'green' && S.year > 2000) S.sobriety = 0.4;
+    if (S.research.carbontax) A.setCp(S, mode === 'green' ? (S.research.dividend ? 150 : 60) : (S.research.dividend ? 80 : 30));
+    if (S.research.meadows && mode === 'green' && S.year > 2000) A.setSobriety(S, 0.4);
     // renouvelables au-delà du marché
     const share = mode === 'green' ? 0.3 : 0.15;
     if (S.research.pv && Sept.renCost(S) < S.treasury * share) A.buildRen(S);
@@ -58,4 +58,4 @@ while (S.phase !== 'end') {
 }
 console.log(out.join('\n'));
 console.log('Bien-être par génération :', Sept.GENS.map((g, i) => `${g.name} ${Sept.genAvg(S, i).toFixed(1)}`).join(' | '));
-console.log(`Fin : T=${S.T.toFixed(2)} SL=${S.SL.toFixed(2)} m`);
+console.log(`Fin : T=${S.T.toFixed(2)} SL=${S.SL.toFixed(2)} m · reculs électoraux ${S.rollbacks} · soutien ${Math.round(S.support * 100)} %`);
