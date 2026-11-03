@@ -295,8 +295,11 @@
     const tot = Math.max(d.Ed, 1);
     const parts = [d.Ruse, d.Nuse, d.Fuse, d.fossilUsed, Math.max(0, d.Ed - d.supply)];
     const surplus = d.capacity - d.supply;
-    set('v-elec', pct(d.elec, 0));
-    set('v-cap', fmt(d.capacity) + ' unités' + (surplus > d.Ed * 0.05 ? ` · ${fmt(surplus)} inutilisées` : ''));
+    set('v-elec', `${pct(d.elec, 0)} · ${pct(1 - d.elec, 0)}`);
+    set('v-cap', fmt(d.capacity) + ' unités' + (surplus > d.Ed * 0.05 ? ` · ${fmt(surplus)} inutilisées` + (d.cleanUsed >= d.Ed * d.elec - 0.5 && d.elec < 1 ? ' (part électrique déjà pleine)' : '') : ''));
+    set('v-ehint', d.fuelShort
+      ? `Il manque des carburants : solaire, nucléaire et fusion ne produisent que de l’électricité. ${pct(1 - d.elec, 0)} des besoins exigent encore du fossile, jusqu’à ce que la recherche les électrifie.`
+      : d.Ed - d.supply > 0.5 ? 'Il manque de l’électricité : construisez de nouvelles centrales.' : '');
     show('lg-fus', S.Fcap > 0);
     $('stack').querySelectorAll('i').forEach((el, i) => {
       const w = Math.round(parts[i] / tot * 1000) / 10 + '%';

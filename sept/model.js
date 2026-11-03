@@ -91,6 +91,9 @@
     d.Nuse = Math.min(S.Ncap, Math.max(0, d.Ed * d.elec - d.Ruse - d.Fuse));
     d.fossilUsed = Math.min(d.F, Math.max(0, d.Ed - d.Ruse - d.Fuse - d.Nuse));
     d.supply = d.Ruse + d.Fuse + d.Nuse + d.fossilUsed;
+    d.cleanUsed = d.Ruse + d.Fuse + d.Nuse;
+    // ce qui manque est-il de l'électricité ou des carburants ?
+    d.fuelShort = d.Ed - d.supply > 0.5 && d.cleanUsed >= d.Ed * d.elec - 0.5;
     d.capacity = S.Rcap + S.Fcap + S.Ncap + d.F;
     d.ratio = d.Ed > 0 ? Math.min(1, d.supply / d.Ed) : 1;
     d.fossilEm = d.fossilUsed * C.FOSSIL_EF;
@@ -468,18 +471,19 @@
     }
   }
 
+  // Le marché ne compte que ce qui peut servir : l'électricité propre ne remplace pas les carburants.
   function market(S, d) {
-    const capR = Math.min(S.Rcap, d.Ed * d.maxR);
-    let cap = capR + S.Fcap + S.Ncap + d.F;
     const need = d.Ed * 1.03;
+    const elecNeed = d.Ed * d.elec;
+    const cleanUsable = () => Math.min(Math.min(S.Rcap, d.Ed * d.maxR) + S.Fcap + S.Ncap, elecNeed);
+    let F = fossilPlants(S) * C.PLANT;
     let guard = 0;
-    while (cap < need && guard++ < 500) {
-      const roomR = Math.min(d.Ed * d.maxR - Math.min(S.Rcap, d.Ed * d.maxR), renRoom(S));
+    while (cleanUsable() + F < need && guard++ < 500) {
+      const roomR = Math.min(d.Ed * d.maxR - Math.min(S.Rcap, d.Ed * d.maxR), elecNeed - cleanUsable(), renRoom(S));
       const fEff = fossilCost(S) * (1 + S.cp / 50);
-      const canRen = S.research.pv && roomR > 1 && renCost(S) < fEff;
-      if (canRen && roomR >= C.PLANT) { if (!spend(S, renCost(S))) break; addRen(S); }
-      else { if (!spend(S, fossilCost(S))) break; addFossil(S, 1); }
-      cap += C.PLANT;
+      const canRen = S.research.pv && roomR >= C.PLANT && renCost(S) < fEff;
+      if (canRen) { if (!spend(S, renCost(S))) break; addRen(S); }
+      else { if (!spend(S, fossilCost(S))) break; addFossil(S, 1); F += C.PLANT; }
     }
   }
 
