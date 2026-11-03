@@ -60,7 +60,7 @@
     if (el && A.research(S, el.dataset.id)) after();
   });
   $('b-reset').addEventListener('click', () => {
-    if (confirm('Effacer la partie et recommencer en 1950 ?')) { Sept.wipe(); S = Sept.newState(); location.reload(); }
+    if (confirm('Effacer la partie et recommencer en 1950 ?')) restart();
   });
 
   // ---------- frise ----------
@@ -472,7 +472,7 @@
         + `<div class="letter"><p>À ${names.slice(0, -1).join(', ')} et ${names[5]},</p>${paras(L.paragraphs)}<p class="sig">— Aube, 2160</p></div>`
         + '<canvas id="end-chart" width="900" height="320"></canvas><div id="end-bars" class="gen-bars"></div>'
         + stats + `<blockquote>${esc(SeptStory.QUOTE)}<br><span class="small">— ${esc(SeptStory.QUOTE_SRC)}</span></blockquote>`,
-      [['Recommencer en 1950', () => { Sept.wipe(); location.reload(); }], ['Retour au menu', () => { location.href = '../index.html'; }]]);
+      [['Recommencer en 1950', restart], ['Retour au menu', () => { location.href = '../index.html'; }]]);
       drawChart($('end-chart'), true);
       renderGenBars($('end-bars'), 6);
       return;
@@ -490,6 +490,8 @@
     render();
     if (now - saveAt > 5000) { saveAt = now; Sept.save(S); }
   }, 100);
+  // Remplacer l'état avant de recharger : sinon la sauvegarde de sortie réécrit l'ancienne partie.
+  function restart() { Sept.wipe(); S = Sept.newState(); location.reload(); }
   window.addEventListener('beforeunload', () => Sept.save(S));
   document.addEventListener('visibilitychange', () => { if (document.hidden) Sept.save(S); });
   render();
