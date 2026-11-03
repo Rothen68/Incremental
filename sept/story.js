@@ -61,9 +61,9 @@
     const inherit = [];
     if (end.plants > 0) {
       const last = Math.max(...S.fossil.map((c) => c.y)) + Sept.C.FOSSIL_LIFE;
-      inherit.push(`Je te laisse ${end.plants} centrales fossiles. Les plus récentes tourneront jusqu’en ${last}, à moins que tu ne les fermes avant.`);
+      inherit.push(`Je te laisse ${end.plants} installations fossiles : centrales, raffineries, gazoducs. Les plus récentes tourneront jusqu’en ${last}, à moins que tu ne les fermes avant.`);
     } else if (start.plants > 0) {
-      inherit.push('Je ne te laisse aucune centrale fossile. La dernière a fermé de mon vivant. Je suis allé·e voir la cheminée tomber.');
+      inherit.push('Je ne te laisse aucune installation fossile. La dernière a fermé de mon vivant. Je suis allé·e voir la cheminée tomber.');
     }
     if (end.ren < start.ren * 0.6) {
       inherit.push(`Le prix des renouvelables a baissé de ${Math.round((1 - end.ren / start.ren) * 100)} % pendant ma vie. C’est peut-être le cadeau le plus utile que je te fasse, et personne ne me remerciera.`);

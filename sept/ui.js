@@ -307,7 +307,7 @@
     set('c-fos', money(Sept.fossilCost(S) * q));
     enable('b-fos', S.treasury >= Sept.fossilCost(S));
     const lastF = S.fossil.length ? Math.max(...S.fossil.map((c) => c.y)) + Sept.C.FOSSIL_LIFE : null;
-    set('v-fos', `${d.plants} centrales` + (d.plants ? ` · utilisées à ${pct(d.F > 0 ? d.fossilUsed / d.F : 0, 0)} · la plus récente ferme en ${lastF}` : ''));
+    set('v-fos', `${d.plants} installations (centrales, raffineries, gazoducs)` + (d.plants ? ` · utilisées à ${pct(d.F > 0 ? d.fossilUsed / d.F : 0, 0)} · la plus récente ferme en ${lastF}` : ''));
     show('b-ren', !!r.pv); show('r-ren', !!r.pv);
     if (r.pv) {
       set('c-ren', money(Sept.renCost(S) * q));
@@ -436,7 +436,7 @@
       modal('intro', `<h3>Sept générations</h3><div class="letter">${paras(SeptStory.INTRO)}</div>`, [['Commencer — Jeanne, 1950', () => {
         A.start(S);
         Sept.log(S, 'Jeanne a vingt-cinq ans. La guerre est finie. Tout est à reconstruire.', 'hist');
-        Sept.log(S, 'Le marché construit pour vous la centrale la moins chère quand l’énergie manque. Vous pouvez le désactiver.', 'sys');
+        Sept.log(S, 'Le marché construit pour vous l’installation la moins chère quand l’énergie manque. Vous pouvez le désactiver.', 'sys');
         closeModal();
       }]]);
       return;

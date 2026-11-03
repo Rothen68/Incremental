@@ -284,7 +284,7 @@
     { id: 'carbontax', y: 1991, cost: 50, name: 'Prix du carbone', desc: 'Faire payer chaque tonne émise. Rapporte de l’argent, rend le fossile moins attractif, réduit un peu la demande. Et met des gens en colère.' },
     { id: 'eff2', y: 1995, sci: 40, req: 'eff1', name: 'Rénovation des bâtiments', desc: 'Besoins en énergie −15 %.' },
     { id: 'education', y: 1990, sci: 30, req: 'models', name: 'Éducation au climat', desc: 'Enseigner le climat à l’école, former les journalistes. Soutien à l’action climatique +10 %.' },
-    { id: 'justtransition', y: 1995, cost: 150, name: 'Transition juste', desc: 'Former et reclasser les travailleurs du fossile. Fermer une centrale coûte trois fois moins de soutien.' },
+    { id: 'justtransition', y: 1995, cost: 150, name: 'Transition juste', desc: 'Former et reclasser les travailleurs du fossile. Fermer une installation fossile coûte trois fois moins de soutien.' },
     { id: 'lobbyreg', y: 2000, cost: 200, name: 'Encadrer le lobbying', desc: 'Registres publics, publicité fossile interdite. Les campagnes de doute pèsent 60 % de moins.' },
     { id: 'assembly', y: 2019, cost: 100, name: 'Convention citoyenne', desc: 'Tirer au sort des citoyens, leur donner du temps et des experts. Soutien +8 %, et la sobriété est mieux acceptée.' },
     { id: 'adapt', y: 2000, cost: 120, name: 'Plan d’adaptation', desc: 'Accepter que le climat a déjà changé. Débloque digues et climatisation.' },
@@ -490,11 +490,11 @@
   function yearly(S, d) {
     const y = S.lastYear;
     S.renYear = 0; S.fusYear = 0;
-    // centrales fossiles en fin de vie
+    // installations fossiles (centrales, raffineries, gazoducs) en fin de vie
     const before = fossilPlants(S);
     S.fossil = S.fossil.filter((c) => y - c.y < C.FOSSIL_LIFE);
     const retired = before - fossilPlants(S);
-    if (retired > 0 && S.flags.retireMsg !== y && retired >= 3) { S.flags.retireMsg = y; log(S, `${retired} centrales fossiles ferment, en fin de vie.`, 'sys'); }
+    if (retired > 0 && S.flags.retireMsg !== y && retired >= 3) { S.flags.retireMsg = y; log(S, `${retired} installations fossiles ferment, en fin de vie.`, 'sys'); }
     for (const h of HISTORY) {
       if (h.y === y) {
         if (!h.cond || h.cond(S)) { log(S, h.msg, h.w ? 'event' : 'hist'); if (h.w) S.effects.push({ w: h.w, until: S.year + 2 }); }
