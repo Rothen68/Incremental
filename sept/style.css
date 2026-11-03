@@ -88,6 +88,8 @@ input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--ink); }
 .gen-bars .gb i { position: absolute; left: 0; right: 0; background: var(--muted); }
 .gen-bars .gb.neg i { background: var(--hot); }
 .gen-bars .gb.cur i { background: var(--ink); }
+.gen-bars .gb.cur.neg i { background: var(--hot); box-shadow: inset 0 0 0 2px var(--ink); }
+.gen-bars .zero { position: absolute; left: 0; right: 0; border-top: 1px solid var(--ink); opacity: .5; z-index: 1; }
 .gen-bars .gb span { position: absolute; bottom: -16px; left: 0; right: 0; text-align: center; font-size: 9px; color: var(--muted); }
 .gen-bars { margin-bottom: 18px; }
 

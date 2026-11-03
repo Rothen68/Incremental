@@ -152,19 +152,30 @@
   }
   function renderGenBars(box, upto) {
     const vals = Sept.GENS.map((g, i) => (i <= upto ? Sept.genAvg(S, i) : null));
-    const scale = Math.max(30, ...vals.filter((v) => v !== null).map(Math.abs));
+    // les barres négatives descendent sous une ligne zéro
+    const known = vals.filter((v) => v !== null);
+    const posMax = Math.max(0, ...known);
+    const negMax = Math.max(0, ...known.map((v) => -v));
+    const total = Math.max(30, posMax + negMax);
+    const zero = negMax / total * 100;
     const sig = vals.map((v) => (v === null ? '-' : nf(v, 0))).join('|') + upto;
     if (box.dataset.sig === sig) return;
     box.dataset.sig = sig;
     box.innerHTML = '';
+    if (negMax > 0) {
+      const z = document.createElement('div');
+      z.className = 'zero';
+      z.style.bottom = zero + '%';
+      box.appendChild(z);
+    }
     vals.forEach((v, i) => {
       const el = document.createElement('div');
       el.className = 'gb' + (v !== null && v < 0 ? ' neg' : '') + (i === S.gen && S.phase === 'play' ? ' cur' : '');
       el.title = Sept.GENS[i].name + (v === null ? '' : ' : ' + nf(v, 1));
       el.innerHTML = '<i></i><span></span>';
       el.querySelector('span').textContent = Sept.GENS[i].name;
-      const h = v === null ? 0 : Math.max(2, Math.abs(v) / scale * 100);
-      el.querySelector('i').style.cssText = `bottom:0;height:${h}%`;
+      const h = v === null ? 0 : Math.max(2, Math.abs(v) / total * 100);
+      el.querySelector('i').style.cssText = `bottom:${v !== null && v < 0 ? zero - h : zero}%;height:${h}%`;
       box.appendChild(el);
     });
   }
