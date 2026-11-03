@@ -281,12 +281,11 @@
     // opinion
     set('v-sup', pct(S.support, 0));
     { const w = Math.round(S.support * 1000) / 10 + '%'; if (cache.barSup !== w) { cache.barSup = w; $('bar-sup').style.width = w; } }
-    const sw = [];
-    if (d.knowledge > 0) sw.push(`savoir +${nf(d.knowledge * 100)}`);
-    if (d.alarmBoost >= 0.01) sw.push(`catastrophes récentes +${nf(d.alarmBoost * 100)}`);
-    if (d.doubt >= 0.01) sw.push(`doute semé par le fossile −${nf(d.doubt * 100)}`);
-    if (d.pain >= 0.01) sw.push(`efforts demandés −${nf(d.pain * 100)}`);
-    set('v-supwhy', sw.length ? sw.join(' · ') : 'personne ne parle encore de climat');
+    // quatre lignes toujours présentes : la hauteur du panneau ne bouge pas
+    set('v-sup-k', '+' + nf(d.knowledge * 100));
+    set('v-sup-a', '+' + nf(d.alarmBoost * 100));
+    set('v-sup-d', '−' + nf(d.doubt * 100));
+    set('v-sup-p', '−' + nf(d.pain * 100));
     set('v-elec2', String(d.nextElection));
     set('v-accept', `la majorité accepte : prix du carbone ≤ ${d.cpCap} €/t · sobriété ≤ ${pct(d.sobCap, 0)}`);
 
